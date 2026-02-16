@@ -13,6 +13,7 @@ const enum Mode {
 let isTDD = false
 let currentMode = Mode.Red
 let waitingForAgentResponse = false // track if waiting for agent to finish
+let didEdit = false
 
 export default function (pi: ExtensionAPI) {
   pi.registerCommand("tdd", {
@@ -50,6 +51,11 @@ export default function (pi: ExtensionAPI) {
 
   // verify writes to src / test folder
   pi.on("tool_call", (event, ctx) => {
+    if(isToolCallEventType("bash", event)) {
+      if(event.input.command.includes("ls -R"))
+        return { block: true, reason: "you are not allowed to use recursive bash comand ls -R, use ls tool instead" }
+    }
+
     if(!isTDD) return;
 
     let path = "";
@@ -76,6 +82,8 @@ export default function (pi: ExtensionAPI) {
                 return { block: true, reason: "in REFACTOR TDD mode, you are only allowed to edit src folder and not test folder" }
             break;
     }
+
+    didEdit = true;
   })
 
   // check if iteration done
@@ -92,6 +100,10 @@ export default function (pi: ExtensionAPI) {
   pi.on("turn_end", async (event, ctx) => {
     if(!isTDD) return;
     if(waitingForAgentResponse) return;
+
+    if(!didEdit) return;
+
+    didEdit = false;
 
     ctx.ui.notify("Running tests...", "info");
 
