@@ -51,21 +51,28 @@ export default function (pi: ExtensionAPI) {
   // verify writes to src / test folder
   pi.on("tool_call", (event, ctx) => {
     if(!isTDD) return;
-    if(!isToolCallEventType("write", event)) return;
+
+    let path = "";
+    if(isToolCallEventType("write", event))
+      path = event.input.path;
+    else if(isToolCallEventType("edit", event))
+      path = event.input.path;
+    else 
+      return;
 
     switch(currentMode) {
         case Mode.Red:
-            if(isSrcFolder(event.input.path))
+            if(isSrcFolder(path))
                 return { block: true, reason: "in RED TDD mode, you are only allowed to edit test folder and not src folder" }
             break;
         
         case Mode.Green:
-            if(isTestFolder(event.input.path))
+            if(isTestFolder(path))
                 return { block: true, reason: "in GREEN TDD mode, you are only allowed to edit src folder and not test folder" }
             break;
 
         case Mode.Refactor:
-            if(isTestFolder(event.input.path))
+            if(isTestFolder(path))
                 return { block: true, reason: "in REFACTOR TDD mode, you are only allowed to edit src folder and not test folder" }
             break;
     }
@@ -74,7 +81,7 @@ export default function (pi: ExtensionAPI) {
   // check if iteration done
   pi.on("agent_end", (event, ctx) => {
     if(!isTDD) return;
-    
+
     if(event.messages.join("\n").includes("[DONE]")) {
       waitingForAgentResponse = false;
       ctx.ui.notify("TDD COMPLETE", "info");
@@ -114,7 +121,7 @@ export default function (pi: ExtensionAPI) {
 }
 
 function isSrcFolder(path: string) {
-    return path.includes("src");
+    return path.includes("src") && !path.includes("test");
 }
 
 function isTestFolder(path: string) {

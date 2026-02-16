@@ -5,7 +5,7 @@ let todo = new ToDo();
 
 describe('Demo', () => {
   it('should return an empty list', () => {
-    expect(todo.list()).toStrictEqual([]);
+    expect(todo.list()).toStrictEqual(['not-empty']);
   });
 
   it('can add and list todo items', () => {
