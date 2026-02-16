@@ -27,7 +27,7 @@ export default function (pi: ExtensionAPI) {
     }
   })
 
-  pi.registerCommand("tdd red", {
+  pi.registerCommand("tdd-red", {
     description: "set TDD mode to RED",
     handler: async (_iterSSEMessages, ctx) => {
         currentMode = Mode.Red;
@@ -35,7 +35,7 @@ export default function (pi: ExtensionAPI) {
     }
   })
 
-  pi.registerCommand("tdd green", {
+  pi.registerCommand("tdd-green", {
     description: "set TDD mode to GREEN",
     handler: async (_iterSSEMessages, ctx) => {
         currentMode = Mode.Green;
@@ -43,7 +43,7 @@ export default function (pi: ExtensionAPI) {
     }
   })
 
-  pi.registerCommand("tdd refactor", {
+  pi.registerCommand("tdd-refactor", {
     description: "set TDD mode to REFACTOR",
     handler: async (_iterSSEMessages, ctx) => {
         currentMode = Mode.Refactor;
