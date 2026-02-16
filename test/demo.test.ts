@@ -1,6 +1,10 @@
 import { ToDo } from "../src/index";
 
-let todo = new ToDo();
+let todo: ToDo
+
+beforeEach(() => {
+  todo = new ToDo();
+})
 
 
 describe('Demo', () => {
@@ -12,5 +16,11 @@ describe('Demo', () => {
     todo.add('task1');
     todo.add('task2');
     expect(todo.list()).toStrictEqual(['task1','task2']);
+  });
+
+  it('removes an item', () => {
+    todo.add('task1');
+    todo.delete('task1');
+    expect(todo.list()).toStrictEqual([]);
   });
 });

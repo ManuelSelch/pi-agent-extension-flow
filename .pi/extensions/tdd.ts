@@ -97,7 +97,7 @@ export default function (pi: ExtensionAPI) {
   })
 
   // run tests after each turn
-  pi.on("turn_end", async (event, ctx) => {
+  pi.on("tool_execution_end", async (event, ctx) => {
     if(!isTDD) return;
     if(waitingForAgentResponse) return;
 
