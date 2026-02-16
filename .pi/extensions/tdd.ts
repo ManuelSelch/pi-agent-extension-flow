@@ -1,13 +1,9 @@
 import { ExtensionAPI, isToolCallEventType } from "@mariozechner/pi-coding-agent"
+import { exec } from "node:child_process"
+import { promisify } from "node:util"
 
-// Define configuration interface
-interface TddConfig {
-  testFolder: string
-  srcFolder: string
-  testCommand: string
-}
+const execAsync = promisify(exec)
 
-// Possible modes
 const enum Mode {
   Red = 'red',
   Green = 'green',
@@ -16,6 +12,7 @@ const enum Mode {
 
 let isTDD = false
 let currentMode = Mode.Red
+let waitingForAgentResponse = false // track if waiting for agent to finish
 
 export default function (pi: ExtensionAPI) {
   pi.registerCommand("tdd", {
@@ -51,6 +48,7 @@ export default function (pi: ExtensionAPI) {
     }
   })
 
+  // verify writes to src / test folder
   pi.on("tool_call", (event, ctx) => {
     if(!isTDD) return;
     if(!isToolCallEventType("write", event)) return;
@@ -72,6 +70,47 @@ export default function (pi: ExtensionAPI) {
             break;
     }
   })
+
+  // check if iteration done
+  pi.on("agent_end", (event, ctx) => {
+    if(!isTDD) return;
+    
+    if(event.messages.join("\n").includes("[DONE]")) {
+      waitingForAgentResponse = false;
+      ctx.ui.notify("TDD COMPLETE", "info");
+    }
+  })
+
+  // run tests after each turn
+  pi.on("turn_end", async (event, ctx) => {
+    if(!isTDD) return;
+    if(waitingForAgentResponse) return;
+
+    ctx.ui.notify("Running tests...", "info");
+
+    try {
+      const { stdout, stderr } = await execAsync("npm test", {
+        cwd: process.cwd(),
+        timeout: 5_000 
+      });
+
+      const testOutput = stdout + (stderr ? `\n${stderr}` : '');
+      const testPassed = !stderr.includes('FAIL') && !stderr.includes('failed');
+
+      const feedbackMessage = formatTestFeedback(testPassed, testOutput, currentMode);
+      
+      pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
+       
+    } catch(error: any) {
+      let errorMessage = (error as Error).message;
+
+      ctx.ui.notify("✗ Tests failed", "error");
+      const feedbackMessage = formatTestFeedback(false, errorMessage, currentMode);
+
+      pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
+    }
+  })
+
 }
 
 function isSrcFolder(path: string) {
@@ -80,4 +119,43 @@ function isSrcFolder(path: string) {
 
 function isTestFolder(path: string) {
     return path.includes("test");
+}
+
+function formatTestFeedback(passed: boolean, output: string, mode: Mode): string {
+  const modeGuidance = getModeGuidance(mode, passed);
+  
+  return `
+    ## Test Results (TDD ${mode.toUpperCase()} phase) 
+    **Status:** ${passed ? '✓ PASSED' : '✗ FAILED'}
+    ${modeGuidance}
+    \`\`\`
+    ${output.trim()}
+    \`\`\`
+  `
+}
+
+
+function getModeGuidance(mode: Mode, passed: boolean): string {
+  if (passed) {
+    switch(mode) {
+      case Mode.Red:
+        return "Tests should fail in RED mode. If they're not failing for the right reasons, adjust your test.";
+      case Mode.Green:
+        currentMode = Mode.Refactor;
+        return "✓ Tests are passing! Mode will advance to REFACTOR - improve code quality without breaking tests.";
+      case Mode.Refactor:
+        waitingForAgentResponse = true;
+        return "✓ Tests still passing after refactor! Ready for the next RED cycle. If you are DONE with refactoring reply with [DONE]";
+    }
+  } else {
+    switch(mode) {
+      case Mode.Red:
+        currentMode = Mode.Green;
+        return "✓ Tests are now failing as expected. Mode will advance to GREEN - implement the minimum code to make tests pass.";
+      case Mode.Green:
+        return "⚠ Tests are failing. Continue implementing until all tests pass.";
+      case Mode.Refactor:
+        return "⚠ Tests broke during refactor! Fix the code to restore green tests.";
+    }
+  }
 }
