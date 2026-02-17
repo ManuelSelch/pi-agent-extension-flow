@@ -2,7 +2,7 @@ import { readFile, writeFile, access } from "node:fs/promises";
 
 export type Task = {
     name: string,
-    description: string
+    isDone: boolean
 }
 
 
@@ -19,7 +19,7 @@ export class TaskStorage {
     constructor(private taskFilePath: string) {}
 
     /**
-     * Read all open tasks from the tasks.md file.
+     * Read all open and closed tasks from the tasks.md file.
      * Returns empty array if file doesn't exist.
      */
     async getTasks(): Promise<Task[]> {
@@ -36,25 +36,16 @@ export class TaskStorage {
 
     /**
      * Parse markdown content to extract tasks.
-     * Format: - [ ] Task name - Task description
-     * Skips completed tasks: - [x] Task name
+     * Format: - [ ] name
      */
     private parseTasks(content: string): Task[] {
-        const tasks: Task[] = [];
-        const lines = content.split('\n');
-        
-        for (const line of lines) {
-            const trimmed = line.trim();
-            // Match open tasks: - [ ] or * [ ]
-            const match = trimmed.match(/^[-*]\s+\[\s*\]\s+(.+?)(?:\s+-\s+(.+))?$/i);
-            if (match) {
-                const name = match[1].trim();
-                const description = match[2]?.trim() || '';
-                tasks.push({ name, description });
-            }
-        }
-        
-        return tasks;
+        return content.split("\n")
+            .filter(l => l.startsWith("- [ ]") || l.startsWith("- [x]"))
+            .map(l => {
+                let isDone = l.startsWith("- [x]");
+                let name = l.slice(5).trim()
+                return { name, isDone }
+            })
     }
 
     /**

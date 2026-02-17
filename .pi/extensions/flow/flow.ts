@@ -97,7 +97,7 @@ export class Flow {
                 // Reconstruct the task from session data
                 this.currentTask = {
                     name: sessionData.taskName,
-                    description: sessionData.taskDescription
+                    isDone: false
                 };
 
                 // Resume based on status
@@ -129,15 +129,15 @@ export class Flow {
     //#region command: list-tasks
     private registerCommand_listTasks() {
         this.pi.registerCommand("list-tasks", {
-            description: "list all open tasks from tasks.md",
+            description: "list all open and closed tasks from tasks.md",
             handler: async (_, ctx) => {
                 const tasks = await this.taskStorage.getTasks();
                 
                 if (tasks.length === 0) {
                     ctx.ui.notify("No open tasks found", "info");
                 } else {
-                    const taskList = tasks.map(t => `• ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
-                    ctx.ui.notify(`Open tasks:\n${taskList}`, "info");
+                    const taskList = tasks.map(t => `• [${t.isDone ? "x" : " "}] ${t.name}`).join('\n');
+                    ctx.ui.notify(`tasks:\n${taskList}`, "info");
                 }
             }
         });
@@ -183,14 +183,14 @@ export class Flow {
     }
 
     private async listTasks(): Promise<string> {
-        const tasks = await this.taskStorage.getTasks();
+        const openTasks = (await this.taskStorage.getTasks()).filter(t => !t.isDone);
         
-        if (tasks.length === 0) {
+        if (openTasks.length === 0) {
             return `SUCCESS: no open tasks found. Create a tasks.md file in the project root with tasks in format: "- [ ] Task name - Description"`;
         }
         
-        const taskNames = tasks.map(t => t.name).join(",");
-        return `SUCCESS: your current open tasks are: ${taskNames}`;
+        const taskNames = openTasks.map(t => t.name).join(",");
+        return `your current open tasks are: ${taskNames}`;
     }
     //#endregion
 

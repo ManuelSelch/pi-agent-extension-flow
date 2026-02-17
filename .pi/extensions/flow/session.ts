@@ -2,10 +2,8 @@ import { readFile, writeFile, access } from "node:fs/promises";
 
 export type SessionData = {
     taskName: string;
-    taskDescription: string;
     requirements: string;
-    startedAt: string;
-    status: 'planning' | 'developing' | 'reviewing' | 'completed';
+    status: 'planning' | 'developing' | 'reviewing';
 };
 
 /**
@@ -19,12 +17,10 @@ export class Session {
      * Start a new session for a task.
      * Creates the session.md file with initial state.
      */
-    async startSession(taskName: string, taskDescription: string): Promise<void> {
+    async startSession(taskName: string): Promise<void> {
         const sessionData: SessionData = {
             taskName,
-            taskDescription,
             requirements: '',
-            startedAt: new Date().toISOString(),
             status: 'planning'
         };
 
@@ -87,7 +83,7 @@ export class Session {
      */
     async hasActiveSession(): Promise<boolean> {
         const session = await this.readSession();
-        return session !== null && session.status !== 'completed';
+        return session !== null;
     }
 
     private async writeSession(sessionData: SessionData): Promise<void> {
