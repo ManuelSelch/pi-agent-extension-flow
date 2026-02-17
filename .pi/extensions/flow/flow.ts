@@ -1,12 +1,14 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { Review } from "./review";
+import { Plan } from "./plan";
 import { TDD } from "./tdd";
 import { resolve } from "node:path";
 import { Task, TaskStorage } from "./task-storage";
 
 export enum FlowMode {
   IDLE,
+  PLAN,
   DEV,
   REVIEW
 }
@@ -15,6 +17,18 @@ const IDLE_TEXT = `
 You are developer and have to follow a strict flow. A state machine will guide you.
 Your current state is: IDLE. 
 This means you have to autonomous pick your next open tasks by calling the list-tasks tool and select it using the select-task tool without asking for permission from user
+`
+
+
+const PLAN_TEXT = `
+You are now in PLAN mode to analyze the selected task.
+Proceed autonomous without asking for user permissions.
+Analyze the task requirements thoroughly:
+- Understand what needs to be implemented
+- Identify potential challenges
+- Plan your approach
+- Consider edge cases
+When you have completed the analysis and understand the requirements, use the start-dev tool to proceed to development.
 `
 
 const DEV_TEXT = `
@@ -37,6 +51,7 @@ export class Flow {
 
         this.tdd = new TDD(pi);
         this.review = new Review(pi);
+        this.plan = new Plan(pi);
     }
 
     register() {
@@ -45,6 +60,7 @@ export class Flow {
         this.registerCommand_addTask();
         this.registerTool_listTasks();
         this.registerTool_selectTask();
+        this.registerTool_startDev();
         this.registerTool_reviewTask();
 
         this.tdd.register();
@@ -52,7 +68,13 @@ export class Flow {
         this.pi.on("agent_end", async (event, ctx) => {
             if(this.currentMode == FlowMode.IDLE) return;
 
-            this.sendMessage(`You are not done yet. Your current mode is: ${FlowMode[this.currentMode]}. In DEV mode you have to implement your task. When you are done, then call the review-task tool to review your code.`)
+            let message = `You are not done yet. Your current mode is: ${FlowMode[this.currentMode]}. `;
+            if(this.currentMode == FlowMode.PLAN) {
+                message += `In PLAN mode you have to analyze the task requirements. When analysis is complete, use the start-dev tool to proceed to development.`;
+            } else if(this.currentMode == FlowMode.DEV) {
+                message += `In DEV mode you have to implement your task. When you are done, then call the review-task tool to review your code.`;
+            }
+            this.sendMessage(message);
         })
     }
 
@@ -105,7 +127,7 @@ export class Flow {
                 const description = await ctx.ui.input("Task description (optional)");
                 
                 await this.taskStorage.addTask(name, description || '');
-                ctx.ui.notify(`Task "${name}" added successfully`, "success");
+                ctx.ui.notify(`Task "${name}" added successfully`, "info");
             }
         });
     }
@@ -172,14 +194,48 @@ export class Flow {
         if(!userConfirmedTask) return `FAILED: user denied selecting this task. Wait for user input before proceeding.`
 
         this.currentTask = selectedTask;
-        this.switchMode(FlowMode.DEV, ctx);
+        this.switchMode(FlowMode.PLAN, ctx);
         await this.deleteTask(selectedTask);
 
-        return `SUCCESS: you selected task "${name}". Task description: "${this.currentTask.description}". ${DEV_TEXT}`
+        return `SUCCESS: you selected task "${name}". Task description: "${this.currentTask.description}". ${PLAN_TEXT}`
     }
 
     private async deleteTask(task: Task): Promise<void> {
         await this.taskStorage.deleteTask(task.name);
+    }
+    //#endregion
+
+    
+    //#region start dev
+    private registerTool_startDev() {
+        this.pi.registerTool({
+            name: "start-dev",
+            label: "start development",
+            description: "complete planning phase and start development (only available in PLAN mode)",
+            parameters: Type.Object({}),
+
+            execute: async (_toolCallId, _params, _signal, _onUpdate, ctx) => {
+                const result = await this.startDev(ctx);
+                return {
+                    content: [{ type: "text", text: result }],
+                    details: {},
+                };
+            },
+        });
+    }
+
+    private async startDev(ctx: ExtensionContext): Promise<string> {
+        if(this.currentMode != FlowMode.PLAN) return `FAILED: you are only allowed to start development in PLAN mode, but you are currently in ${FlowMode[this.currentMode]}`
+
+        if(!this.currentTask) return `FAILED: no task selected. Use select-task tool first.`
+
+        const result = await this.plan.complete(ctx);
+
+        if(!result.success)
+            return `FAILED: ${result.requirements}. Planning phase was rejected. Continue analyzing the task.`
+
+        this.switchMode(FlowMode.DEV, ctx);
+        return `SUCCESS: ${result.requirements} ${DEV_TEXT}`
     }
     //#endregion
 
@@ -236,8 +292,10 @@ export class Flow {
 
     private tdd: TDD;
     private review: Review;
+    private plan: Plan;
 
     private currentMode = FlowMode.IDLE;
     private currentTask: Task | undefined = undefined;
     //#endregion
 }
+
