@@ -7,7 +7,7 @@ beforeEach(() => {
 })
 
 
-describe('Demo', () => {
+describe('list', () => {
   it('should return an empty list', () => {
     expect(todo.list()).toStrictEqual([]);
   });
