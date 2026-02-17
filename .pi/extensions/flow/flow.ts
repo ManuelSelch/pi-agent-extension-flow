@@ -1,7 +1,7 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { Review } from "./review";
-import { TDD } from "./tdd-v2";
+import { TDD } from "./tdd";
 
 export enum FlowMode {
   IDLE,
