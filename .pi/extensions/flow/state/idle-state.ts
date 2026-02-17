@@ -1,4 +1,4 @@
-import { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { ExtensionContext, ToolCallEvent, ToolResultEvent } from "@mariozechner/pi-coding-agent";
 import { Task } from "../util/task-storage";
 import { State, StateName } from "./state";
 
@@ -22,12 +22,12 @@ export class IdleState implements State {
         ctx.ui.notify("Flow: Leaving IDLE", "info");
     }
 
-    async onToolCall(toolName: string, event: any, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
+    async onToolCall(event: ToolCallEvent, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
         // In IDLE, all tools are allowed
         return undefined;
     }
 
-    async onToolResult(toolName: string, event: any, ctx: ExtensionContext): Promise<void> {
+    async onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void> {
         // No special handling
     }
 

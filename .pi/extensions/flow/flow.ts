@@ -47,13 +47,22 @@ export class Flow {
         this.registerTool_reviewTask();
 
         this.pi.on("agent_end", async (event, ctx) => {
+            if(this.currentState == undefined) return;
             await this.verifyAgentIsDone();
+        })
+
+        this.pi.on("tool_call", async (event, ctx) => {
+            if(this.currentState == undefined) return;
+            this.states[this.currentState].onToolCall(event, ctx);
+        })
+        
+        this.pi.on("tool_result", async (event, ctx) => {
+            if(this.currentState == undefined) return;
+            this.states[this.currentState].onToolResult(event, ctx);
         })
     }
 
-    private async verifyAgentIsDone() {
-        if(this.currentState == undefined) return;
-        
+    private async verifyAgentIsDone() {        
         const tasksAreEmpty = (await this.taskStorage.getTasks()).length == 0;
 
         if(this.currentMode == FlowMode.IDLE && tasksAreEmpty) return;

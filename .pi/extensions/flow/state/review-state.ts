@@ -1,4 +1,4 @@
-import { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { ExtensionContext, ToolCallEvent, ToolResultEvent } from "@mariozechner/pi-coding-agent";
 import { Task } from "../util/task-storage";
 import { Session } from "../util/session";
 import { State, StateName } from "./state";
@@ -40,12 +40,12 @@ export class ReviewState implements State {
         ctx.ui.notify("Flow: Leaving REVIEW", "info");
     }
 
-    async onToolCall(toolName: string, event: any, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
+    async onToolCall(event: ToolCallEvent, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
         // In REVIEW mode, all tools are allowed (read-only operations mostly)
         return undefined;
     }
 
-    async onToolResult(toolName: string, event: any, ctx: ExtensionContext): Promise<void> {
+    async onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void> {
         // No special handling
     }
 

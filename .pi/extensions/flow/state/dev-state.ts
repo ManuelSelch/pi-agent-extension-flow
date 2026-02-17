@@ -1,4 +1,4 @@
-import { ExtensionAPI, ExtensionContext, isToolCallEventType } from "@mariozechner/pi-coding-agent";
+import { ExtensionAPI, ExtensionContext, isToolCallEventType, ToolCallEvent, ToolResultEvent } from "@mariozechner/pi-coding-agent";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { Task } from "../util/task-storage";
@@ -52,11 +52,11 @@ export class DevState implements State {
         ctx.ui.notify("Flow: Leaving DEV", "info");
     }
 
-    async onToolCall(toolName: string, event: any, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
+    async onToolCall(event: ToolCallEvent, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
         if (!this.isEnabled) return;
         
         // Only handle write/edit for TDD restrictions
-        if (toolName !== 'write' && toolName !== 'edit') return;
+        if (event.toolName !== 'write' && event.toolName !== 'edit') return;
         
         const path = event.input.path as string;
         
@@ -85,7 +85,7 @@ export class DevState implements State {
         return undefined;
     }
 
-    async onToolResult(toolName: string, event: any, ctx: ExtensionContext): Promise<void> {
+    async onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void> {
         if (!this.isEnabled) return;
         if (this.waitingForAgentResponse) return;
         if (!this.didEdit) return;
@@ -165,6 +165,7 @@ ${output.trim()}
     }
 }
 
+//#region detect folder helper
 function isSrcFolder(path: string): boolean {
     return path.includes("src") && !path.includes("test");
 }
@@ -172,3 +173,4 @@ function isSrcFolder(path: string): boolean {
 function isTestFolder(path: string): boolean {
     return path.includes("test");
 }
+//#endregion

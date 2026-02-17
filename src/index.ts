@@ -8,4 +8,10 @@ export class ToDo {
   add(item: string) {
     this.items.push(item);
   }
+
+  delete(index: number) {
+    if (index >= 0 && index < this.items.length) {
+      this.items.splice(index, 1);
+    }
+  }
 }

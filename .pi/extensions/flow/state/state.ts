@@ -1,4 +1,4 @@
-import { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { ExtensionContext, ToolCallEvent, ToolResultEvent } from "@mariozechner/pi-coding-agent";
 import { Task } from "../util/task-storage";
 
 /**
@@ -24,13 +24,13 @@ export interface State {
      * Handle tool calls in this state.
      * Return a block result to prevent the tool from executing.
      */
-    onToolCall(toolName: string, event: any, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void>;
+    onToolCall(event: ToolCallEvent, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void>;
     
     /**
      * Handle tool results in this state.
      * Called after a tool executes successfully.
      */
-    onToolResult(toolName: string, event: any, ctx: ExtensionContext): Promise<void>;
+    onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void>;
     
     /**
      * Get the prompt text for the agent in this state.
