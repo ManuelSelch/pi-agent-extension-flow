@@ -65,15 +65,15 @@ export class Flow {
     private async verifyAgentIsDone() {        
         const tasksAreEmpty = ((await this.taskStorage.getTasks()).filter(t => !t.isDone)).length == 0;
 
-        if(this.currentMode == FlowMode.IDLE && tasksAreEmpty) return;
+        if(this.currentState == "idle" && tasksAreEmpty) return;
 
-        let message = `You are not done yet. Your current mode is: ${FlowMode[this.currentMode]}. `;
+        let message = `You are not done yet. Your current state is: ${this.currentState}. `;
 
-        if(this.currentMode == FlowMode.IDLE)
+        if(this.currentState == "idle")
             message += `In IDLE mode you have to select the next open task using list-tasks tool and select-task tool`;
-        if(this.currentMode == FlowMode.PLAN)
+        if(this.currentState == "plan")
             message += `In PLAN mode you have to analyze the task requirements. When analysis is complete, use the start-dev tool with your gathered requirements to proceed to development.`;
-        else if(this.currentMode == FlowMode.DEV)
+        else if(this.currentState == "dev")
             message += `In DEV mode you have to implement your task. When you are done, then call the review-task tool to review your code.`;
 
         this.sendMessage(message);
@@ -237,7 +237,7 @@ export class Flow {
     }
 
     private async selectTask(name: string, ctx: ExtensionContext): Promise<string> {
-        if(this.currentMode != FlowMode.IDLE) return `FAILED: you are only allowed to select a task in IDLE mode, but you are currently in ${FlowMode[this.currentMode]}`
+        if(this.currentState != "idle") return `FAILED: you are only allowed to select a task in IDLE state, but you are in ${this.currentState} state`
 
         if(name == undefined || name.trim() == "") return `FAILED: you need to provide a name as parameter that defines the task name`
 
@@ -250,7 +250,6 @@ export class Flow {
 
         this.currentTask = selectedTask;
 
-        this.switchMode(FlowMode.PLAN, ctx);
         await this.transition("plan", ctx);
 
         return await this.transition("plan", ctx);
@@ -280,7 +279,7 @@ export class Flow {
     }
 
     private async startDev(requirements: string, ctx: ExtensionContext): Promise<string> {
-        if(this.currentMode != FlowMode.PLAN) return `FAILED: you are only allowed to start development in PLAN mode, but you are currently in ${FlowMode[this.currentMode]}`
+        if(this.currentState != "plan") return `FAILED: you are only allowed to start development in PLAN state, but you are currently in ${this.currentState} state`
 
         if(!this.currentTask) return `FAILED: no task selected. Use select-task tool first.`
 
@@ -289,7 +288,6 @@ export class Flow {
         if(!result.success)
             return `FAILED: ${result.requirements}. Planning phase was rejected. Continue analyzing the task.`
 
-        this.switchMode(FlowMode.DEV, ctx);
         return await this.transition("dev", ctx);
     }
     //#endregion
@@ -313,9 +311,7 @@ export class Flow {
     } 
 
     private async reviewTask(ctx: ExtensionContext): Promise<string> {
-        if(this.currentMode != FlowMode.DEV) return `FAILED: the review-task tool is only allowed in DEV mode but you are currently in ${FlowMode[this.currentMode]} mode`;
-
-        this.switchMode(FlowMode.REVIEW, ctx);
+        if(this.currentState != "dev") return `FAILED: the review-task tool is only allowed in DEV mode but you are currently in ${this.currentState} state`;
 
         const feedback = await this.transition("review", ctx);
         const success = feedback.startsWith("SUCCESS");
@@ -346,11 +342,6 @@ export class Flow {
         // sends user message to agent
         this.pi.sendUserMessage(msg, {deliverAs: "steer"});
     }
-
-    private switchMode(mode: FlowMode, ctx: ExtensionContext) {
-        this.currentMode = mode;
-        ctx.ui.notify(`mode switched to ${FlowMode[mode]}`)
-    }
     //#endregion
 
     //#region properties
@@ -360,8 +351,6 @@ export class Flow {
 
     private states: Record<StateName, State>
     private currentState: StateName | undefined;
-
-    private currentMode = FlowMode.IDLE;
     private currentTask: Task | undefined = undefined;
     //#endregion
 }
