@@ -18,6 +18,16 @@ export class Plan {
         this.pi = pi;
     }
 
+    register() {
+        this.pi.on("tool_call", async (event, ctx) => {
+            if (!this.isEnabled) return;
+
+            // block write and edit tools in PLAN mode
+            if (event.toolName === "write" || event.toolName === "edit")
+                return { block: true,  reason: `Tool "${event.toolName}" is blocked in PLAN mode. Complete planning first by using the start-dev tool to proceed to development.` };
+        });
+    }
+
     /**
      * Start the planning phase for a task.
      * Returns the analyzed requirements.
@@ -59,4 +69,5 @@ export class Plan {
     }
 
     private pi: ExtensionAPI;
+    private isEnabled = false;
 }

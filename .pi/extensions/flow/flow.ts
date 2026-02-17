@@ -23,6 +23,7 @@ This means you have to autonomous pick your next open tasks by calling the list-
 const PLAN_TEXT = `
 You are now in PLAN mode to analyze the selected task.
 Proceed autonomous without asking for user permissions.
+IMPORTANT: You are NOT allowed to write or edit files in PLAN mode. These tools are blocked.
 Analyze the task requirements thoroughly:
 - Understand what needs to be implemented
 - Identify potential challenges
