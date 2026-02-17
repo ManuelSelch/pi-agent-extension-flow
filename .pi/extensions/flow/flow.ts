@@ -224,14 +224,9 @@ export class Flow {
         if(!userConfirmedTask) return `FAILED: user denied selecting this task. Wait for user input before proceeding.`
 
         this.currentTask = selectedTask;
-        await this.deleteTask(selectedTask);
 
         this.switchMode(FlowMode.PLAN, ctx);
         return await this.plan.start(selectedTask, ctx);
-    }
-
-    private async deleteTask(task: Task): Promise<void> {
-        await this.taskStorage.deleteTask(task.name);
     }
     //#endregion
 
@@ -290,11 +285,16 @@ export class Flow {
     } 
 
     private async reviewTask(ctx: ExtensionContext): Promise<string> {
+        if(this.currentMode != FlowMode.DEV) return `FAILED: the review-task tool is only allowed in DEV mode but you are currently in ${FlowMode[this.currentMode]} mode`;
+
+        this.switchMode(FlowMode.REVIEW, ctx);
+
         const result = await this.review.start(ctx);
 
         if(!result.success)
             return `FAILED: ${result.feedback}. Your review got rejected. You are back still in DEV. Fix all review suggestions and then run review-task tool again. Do it autonomously without asking for user permission.`
 
+        this.taskStorage.deleteTask(this.currentTask!.name);
         this.switchMode(FlowMode.IDLE, ctx);
         return `SUCCESS: ${result.feedback}. You are done with this task.  ${IDLE_TEXT}`
     }
