@@ -10,5 +10,9 @@
   },
   "devDependencies": {
     "@types/node": "^25.2.3"
+  },
+  "dependencies": {
+    "@mariozechner/pi-coding-agent": "^0.53.0",
+    "@sinclair/typebox": "^0.34.48"
   }
 }
