@@ -14,9 +14,9 @@ enum TddMode {
 }
 
 const DEV_PROMPT = `
-You are now in DEV mode to implement the selected task. 
+You are now in DEV state to implement the selected task. 
 Proceed autonomous without asking for user permissions. 
-In DEV Mode you have to follow RED, GREEN, REFACTOR. 
+In DEV state you have to follow RED, GREEN, REFACTOR. 
 You are now in RED DEV mode. 
 RED DEV mode: write a failing test first. 
 GREEN DEV mode: implement it to pass the test
@@ -40,7 +40,7 @@ export class DevState implements State {
         // Update session status
         await this.session.updateStatus('developing');
         
-        ctx.ui.notify("Flow: DEV mode (TDD: RED)", "info");
+        ctx.ui.notify("Flow: DEV state (TDD: RED)", "info");
         
         return DEV_PROMPT;
     }
@@ -132,7 +132,7 @@ ${output.trim()}
                     return "Tests should fail in RED mode. If they're not failing for the right reasons, adjust your test.";
                 case TddMode.GREEN:
                     this.tddMode = TddMode.REFACTOR;
-                    return "✓ Tests are passing! Mode will advance to REFACTOR - improve code quality without breaking tests.";
+                    return "✓ Tests are passing! State will advance to REFACTOR - improve code quality without breaking tests.";
                 case TddMode.REFACTOR:
                     return "✓ Tests still passing after refactor! Ready for the next RED cycle. If you are DONE with refactoring reply with [DONE]";
             }
@@ -140,7 +140,7 @@ ${output.trim()}
             switch (this.tddMode) {
                 case TddMode.RED:
                     this.tddMode = TddMode.GREEN;
-                    return "✓ Tests are now failing as expected. Mode will advance to GREEN - implement the minimum code to make tests pass.";
+                    return "✓ Tests are now failing as expected. State will advance to GREEN - implement the minimum code to make tests pass.";
                 case TddMode.GREEN:
                     return "⚠ Tests are failing. Continue implementing until all tests pass.";
                 case TddMode.REFACTOR:

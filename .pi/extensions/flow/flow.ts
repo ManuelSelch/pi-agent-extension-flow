@@ -70,11 +70,11 @@ export class Flow {
         let message = `You are not done yet. Your current state is: ${this.currentState}. `;
 
         if(this.currentState == "idle")
-            message += `In IDLE mode you have to select the next open task using list-tasks tool and select-task tool`;
+            message += `In IDLE state you have to select the next open task using list-tasks tool and select-task tool`;
         if(this.currentState == "plan")
-            message += `In PLAN mode you have to analyze the task requirements. When analysis is complete, use the start-dev tool with your gathered requirements to proceed to development.`;
+            message += `In PLAN state you have to analyze the task requirements. When analysis is complete, use the start-dev tool with your gathered requirements to proceed to development.`;
         else if(this.currentState == "dev")
-            message += `In DEV mode you have to implement your task. When you are done, then call the review-task tool to review your code.`;
+            message += `In DEV state you have to implement your task. When you are done, then call the review-task tool to review your code.`;
 
         this.sendMessage(message);
     }
@@ -311,7 +311,7 @@ export class Flow {
     } 
 
     private async reviewTask(ctx: ExtensionContext): Promise<string> {
-        if(this.currentState != "dev") return `FAILED: the review-task tool is only allowed in DEV mode but you are currently in ${this.currentState} state`;
+        if(this.currentState != "dev") return `FAILED: the review-task tool is only allowed in DEV state but you are currently in ${this.currentState} state`;
 
         const feedback = await this.transition("review", ctx);
         const success = feedback.startsWith("SUCCESS");

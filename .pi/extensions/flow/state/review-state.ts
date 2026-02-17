@@ -23,7 +23,7 @@ export class ReviewState implements State {
         // Update session status
         await this.session.updateStatus('reviewing');
 
-        ctx.ui.notify(`Flow: REVIEW mode - ${task.name}`, "info");
+        ctx.ui.notify(`Flow: REVIEW state - ${task.name}`, "info");
 
         // Run the review process
         const result = await this.review(ctx);
@@ -32,7 +32,7 @@ export class ReviewState implements State {
             await this.session.completeSession();
             return `SUCCESS: ${result.feedback}. Task completed!`;
         } else {
-            return `FAILED: ${result.feedback}. Review rejected. Return to DEV mode to fix issues.`;
+            return `FAILED: ${result.feedback}. Review rejected. Return to DEV state to fix issues.`;
         }
     }
 

@@ -4,7 +4,7 @@ import { Session } from "../util/session";
 import { State, StateName } from "./state";
 
 const PLAN_PROMPT = `
-You are now in PLAN mode to analyze the selected task.
+You are now in PLAN state to analyze the selected task.
 Proceed autonomous without asking for user permissions.
 IMPORTANT: You are NOT allowed to write or edit files in PLAN mode. These tools are blocked.
 Analyze the task requirements thoroughly:
@@ -29,7 +29,7 @@ export class PlanState implements State {
         // Start a new session for this task
         await this.session.startSession(task.name);
         
-        ctx.ui.notify(`Flow: PLAN mode - ${task.name}`, "info");
+        ctx.ui.notify(`Flow: PLAN state - ${task.name}`, "info");
         
         return `You selected task "${task.name}" ${PLAN_PROMPT}`;
     }
