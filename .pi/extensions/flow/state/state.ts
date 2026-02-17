@@ -6,8 +6,6 @@ import { Task } from "../util/task-storage";
  * Each state encapsulates its own behavior, tool restrictions, and transitions.
  */
 export interface State {
-    readonly name: string;
-    
     /**
      * Called when entering this state.
      * Initialize UI, enable tool blocking, update session.

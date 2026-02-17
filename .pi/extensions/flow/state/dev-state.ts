@@ -25,7 +25,6 @@ When you finished this task, then use the review-task tool to let the user revie
 `;
 
 export class DevState implements State {
-    readonly name: StateName = 'dev';
     private tddMode: TddMode = TddMode.RED;
 
     constructor(private pi: ExtensionAPI, private session: Session) {}

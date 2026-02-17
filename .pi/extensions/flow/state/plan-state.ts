@@ -21,8 +21,6 @@ export type PlanResult = {
 };
 
 export class PlanState implements State {
-    readonly name: StateName = 'plan';
-
     constructor(private session: Session) {}
 
     async onEnter(task: Task, ctx: ExtensionContext): Promise<string> {        

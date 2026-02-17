@@ -9,7 +9,8 @@ This means you have to autonomous pick your next open tasks by calling the list-
 `;
 
 export class IdleState implements State {
-    readonly name: StateName = 'idle';
+
+    constructor() {}
 
     async onEnter(task: Task, ctx: ExtensionContext): Promise<string> {
         // No tool blocking in idle

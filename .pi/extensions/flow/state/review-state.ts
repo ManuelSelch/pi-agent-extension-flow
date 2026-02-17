@@ -15,8 +15,6 @@ export type ReviewResult = {
 };
 
 export class ReviewState implements State {
-    readonly name: StateName = 'review';
-
     constructor(private session: Session) {}
 
     async onEnter(task: Task, ctx: ExtensionContext): Promise<string> {
