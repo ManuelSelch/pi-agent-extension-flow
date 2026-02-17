@@ -33,15 +33,28 @@ export class DevFlow {
     }
 
     register() {
+        this.registerCommand_initialize();
         this.registerTool_listTasks();
         this.registerTool_selectTask();
         this.registerTool_reviewTask();
     }
 
-    initialize() {
+    //#region initialize
+    private registerCommand_initialize() {
+        this.pi.registerCommand("dev-flow", {
+            description: "initialize dev agent flow",
+            handler: async (_, ctx) => {
+                ctx.ui.notify("dev flow enabled", "info");
+                this.initialize();
+            }
+        })
+    }
+
+    private initialize() {
         this.currentMode = FlowMode.IDLE;
         this.sendMessage(IDLE_TEXT);
     }
+    //#endregion
 
     //#region list-tasks
     private registerTool_listTasks() {
@@ -109,6 +122,7 @@ export class DevFlow {
     }
     //#endregion
 
+    //#region review task
     private registerTool_reviewTask() {
         this.pi.registerTool({
             name: "review-task",
@@ -134,6 +148,7 @@ export class DevFlow {
         this.currentMode = FlowMode.IDLE;
         return `SUCCESS: user reviewed your code implementation and approved it. ${IDLE_TEXT}`
     }
+    //#endregion
 
     //#region helper
     private sendMessage(msg: string) {
@@ -144,6 +159,7 @@ export class DevFlow {
 
     //#region properties
     private pi: ExtensionAPI
+
     private currentMode = FlowMode.IDLE;
     private tasks: Task[] = [
         {name: "implement delete method", "description": "implement a delete() method in src/index.ts to delete todo items"},
