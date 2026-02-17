@@ -2,16 +2,13 @@ import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { Review } from "./review";
 import { TDD } from "./tdd";
+import { resolve } from "node:path";
+import { Task, TaskStorage } from "./task-storage";
 
 export enum FlowMode {
   IDLE,
   DEV,
   REVIEW
-}
-
-export type Task = {
-    name: string,
-    description: string
 }
 
 const IDLE_TEXT = `
@@ -36,6 +33,7 @@ When you finished this task, then use the review-task tool to let the user revie
 export class Flow {
     constructor(pi: ExtensionAPI) {
         this.pi = pi;
+        this.taskStorage = new TaskStorage(resolve(process.cwd(), 'tasks.md'));
 
         this.tdd = new TDD(pi);
         this.review = new Review(pi);
@@ -81,8 +79,8 @@ export class Flow {
             description: "list all open tasks",
             parameters: Type.Object({}),
 
-            execute: async (_toolCallId, _params, _signal, _onUpdate, _ctx) => {
-                const result = this.listTasks();
+            execute: async (_toolCallId, _params, _onUpdate, _ctx) => {
+                const result = await this.listTasks();
                 return {
                     content: [{ type: "text", text: result }],
                     details: {},
@@ -91,9 +89,15 @@ export class Flow {
         });
     }
 
-    private listTasks(): string {
-        let taskNames = this.tasks.map(t => t.name).join(",");
-        return `SUCCESS: your current open tasks are: ${taskNames}`
+    private async listTasks(): Promise<string> {
+        const tasks = await this.taskStorage.getTasks();
+        
+        if (tasks.length === 0) {
+            return `SUCCESS: no open tasks found. Create a tasks.md file in the project root with tasks in format: "- [ ] Task name - Description"`;
+        }
+        
+        const taskNames = tasks.map(t => t.name).join(",");
+        return `SUCCESS: your current open tasks are: ${taskNames}`;
     }
     //#endregion
 
@@ -120,7 +124,8 @@ export class Flow {
     private async selectTask(name: string, ctx: ExtensionContext): Promise<string> {
         if(this.currentMode != FlowMode.IDLE) return `FAILED: you are only allowed to select a task in IDLE mode, but you are currently in ${FlowMode[this.currentMode]}`
 
-        const selectedTask = this.tasks.find(t => t.name == name);
+        const tasks = await this.taskStorage.getTasks();
+        const selectedTask = tasks.find(t => t.name == name);
         if(selectedTask == undefined) return `FAILED: your selected task does not exist. Use list-tasks tool to see open tasks and then try again the select-task tool`
 
         const userConfirmedTask = await ctx.ui.confirm("Confirm Task", `selected task is ${selectedTask.name}`)
@@ -128,14 +133,13 @@ export class Flow {
 
         this.currentTask = selectedTask;
         this.switchMode(FlowMode.DEV, ctx);
-        this.deleteTask(selectedTask);
+        await this.deleteTask(selectedTask);
 
         return `SUCCESS: you selected task "${name}". Task description: "${this.currentTask.description}". ${DEV_TEXT}`
     }
 
-    private deleteTask(task: Task) {
-        const index = this.tasks.indexOf(task);
-        if (index !== -1) this.tasks.splice(index, 1);
+    private async deleteTask(task: Task): Promise<void> {
+        await this.taskStorage.deleteTask(task.name);
     }
     //#endregion
 
@@ -188,15 +192,12 @@ export class Flow {
 
     //#region properties
     private pi: ExtensionAPI
+    private taskStorage: TaskStorage;
 
     private tdd: TDD;
     private review: Review;
 
     private currentMode = FlowMode.IDLE;
-    private tasks: Task[] = [
-        {name: "implement delete method", "description": "implement a delete() method in src/index.ts to delete todo items"},
-        {name: "implement filter method", "description": "implement a filter(search: string) method in src/index.ts to search for specific todo items"}
-    ]
     private currentTask: Task | undefined = undefined;
     //#endregion
 }
