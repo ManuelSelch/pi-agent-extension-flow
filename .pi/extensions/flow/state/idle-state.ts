@@ -24,8 +24,9 @@ export class IdleState implements State {
     }
 
     async onToolCall(event: ToolCallEvent, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
-        // In IDLE, all tools are allowed
-        return undefined;
+        // block write & edit
+        if(event.toolName == "write" || event.toolName == "edit")
+            return { block: true, reason: "You are not allowed to write or edit files in IDLE mode." }
     }
 
     async onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void> {
