@@ -6,6 +6,7 @@ import { Dev } from "./mode/dev";
 import { resolve } from "node:path";
 import { Task, TaskStorage } from "./util/task-storage";
 import { Session } from "./util/session";
+import { Idle } from "./mode/idle";
 
 export enum FlowMode {
   IDLE,
@@ -14,19 +15,14 @@ export enum FlowMode {
   REVIEW
 }
 
-const IDLE_TEXT = `
-You are developer and have to follow a strict flow. A state machine will guide you.
-Your current state is: IDLE. 
-This means you have to autonomous pick your next open tasks by calling the list-tasks tool and select it using the select-task tool without asking for permission from user
-`
-
-// development flow (IDLE, DEV, REVIEW)
+// development flow (IDLE, PLAN, DEV, REVIEW)
 export class Flow {
     constructor(pi: ExtensionAPI) {
         this.pi = pi;
         this.taskStorage = new TaskStorage(resolve(process.cwd(), 'tasks.md'));
         this.session = new Session(resolve(process.cwd(), 'session.json'));
 
+        this.idle = new Idle();
         this.plan = new Plan(pi, this.session);
         this.dev = new Dev(pi, this.session);
         this.review = new Review(pi, this.session);
@@ -79,7 +75,7 @@ export class Flow {
 
     private initialize(ctx: ExtensionContext) {
         this.switchMode(FlowMode.IDLE, ctx);
-        this.sendMessage(IDLE_TEXT);
+        this.sendMessage(this.idle.start());
     }
     //#endregion
 
@@ -298,7 +294,7 @@ export class Flow {
 
         this.taskStorage.completeTask(this.currentTask!.name);
         this.switchMode(FlowMode.IDLE, ctx);
-        return `SUCCESS: ${result.feedback}. You are done with this task.  ${IDLE_TEXT}`
+        return `SUCCESS: ${result.feedback}. You are done with this task. ${this.idle.start()}`
     }
     //#endregion
 
@@ -319,10 +315,12 @@ export class Flow {
     //#region properties
     private pi: ExtensionAPI
     private taskStorage: TaskStorage;
-    private session: Session; 
+    private session: Session;
+    
+    private idle: Idle;
+    private plan: Plan;
     private dev: Dev;
     private review: Review;
-    private plan: Plan;
 
     private currentMode = FlowMode.IDLE;
     private currentTask: Task | undefined = undefined;
