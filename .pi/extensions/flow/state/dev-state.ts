@@ -71,10 +71,6 @@ export class DevState implements State {
         this.pi.sendUserMessage(feedback, { deliverAs: "steer" });
     }
 
-    getPrompt(task: Task): string {
-        return DEV_PROMPT;
-    }
-
     /**
      * Run tests and return formatted feedback.
      */

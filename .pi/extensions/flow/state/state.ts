@@ -29,11 +29,6 @@ export interface State {
      * Called after a tool executes successfully.
      */
     onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void>;
-    
-    /**
-     * Get the prompt text for the agent in this state.
-     */
-    getPrompt(task: Task): string;
 }
 
 export type StateName = 'idle' | 'plan' | 'dev' | 'review';

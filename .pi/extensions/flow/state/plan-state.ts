@@ -52,10 +52,6 @@ export class PlanState implements State {
         // No special handling
     }
 
-    getPrompt(task: Task): string {
-        return PLAN_PROMPT;
-    }
-
     /**
      * Complete the planning phase.
      * Called by Flow when start-dev tool is used.

@@ -31,8 +31,4 @@ export class IdleState implements State {
     async onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void> {
         // No special handling
     }
-
-    getPrompt(task: Task): string {
-        return IDLE_PROMPT;
-    }
 }

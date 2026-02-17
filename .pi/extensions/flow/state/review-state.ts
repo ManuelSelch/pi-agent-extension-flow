@@ -47,10 +47,6 @@ export class ReviewState implements State {
         // No special handling
     }
 
-    getPrompt(task: Task): string {
-        return REVIEW_PROMPT;
-    }
-
     /**
      * Run the review process.
      */
