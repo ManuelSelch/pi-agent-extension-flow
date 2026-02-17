@@ -1,7 +1,7 @@
 import { ExtensionAPI, isToolCallEventType } from "@mariozechner/pi-coding-agent"
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
-import { DevFlow, FlowMode } from "./dev-flow"
+import { Flow, FlowMode } from "./flow"
 
 const execAsync = promisify(exec)
 
@@ -20,8 +20,6 @@ let didEdit = false
 
 
 export default function (pi: ExtensionAPI) {
-    let flow = new DevFlow(pi);
-
     pi.registerCommand("dev-flow", {
         description: "toggle dev agent flow",
         handler: async (_, ctx) => {

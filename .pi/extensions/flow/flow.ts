@@ -1,5 +1,6 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
+import { Review } from "./review";
 
 export enum FlowMode {
   IDLE,
@@ -30,6 +31,8 @@ You do not need to implement it. Just use now the tool review-task.
 export class Flow {
     constructor(pi: ExtensionAPI) {
         this.pi = pi;
+
+        this.review = new Review(pi);
     }
 
     register() {
@@ -41,8 +44,8 @@ export class Flow {
 
     //#region initialize
     private registerCommand_initialize() {
-        this.pi.registerCommand("dev-flow", {
-            description: "initialize dev agent flow",
+        this.pi.registerCommand("initialize-flow", {
+            description: "initialize agent flow",
             handler: async (_, ctx) => {
                 ctx.ui.notify("dev flow enabled", "info");
                 this.initialize();
@@ -141,12 +144,13 @@ export class Flow {
     } 
 
     private async reviewTask(ctx: ExtensionContext): Promise<string> {
-        const userConfirmed = await ctx.ui.confirm("Review Task", "did agent implement task successfully?");
+        const result = await this.review.review(ctx);
 
-        if(!userConfirmed) return `FAILED: user reviewed your code implementation and denied it. Wait for input form user before proceeding.`;
+        if(!result.success)
+            return `FAILED: ${result.feedback}. Your review got rejected. You are back still in DEV. Fix all review suggestions and then run review-task tool again. Do it autonomously without asking for user permission.`
 
         this.currentMode = FlowMode.IDLE;
-        return `SUCCESS: user reviewed your code implementation and approved it. ${IDLE_TEXT}`
+        return `SUCCESS: ${result.feedback}. You are done with this task.  ${IDLE_TEXT}`
     }
     //#endregion
 
@@ -159,6 +163,8 @@ export class Flow {
 
     //#region properties
     private pi: ExtensionAPI
+
+    private review: Review;
 
     private currentMode = FlowMode.IDLE;
     private tasks: Task[] = [
