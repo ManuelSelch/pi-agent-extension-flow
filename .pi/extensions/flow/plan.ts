@@ -51,12 +51,12 @@ export class Plan {
         ctx.ui.notify(`Starting planning phase for: ${task.name}`, "info");
         
         // Start a new session for this task
-        await this.session.startSession(task.name, task.description);
+        await this.session.startSession(task.name);
         
         // Enable tool blocking
         this.isEnabled = true;
         
-        return `SUCCESS: you selected task "${task.name}". Task description: "${task.description}" ${PLAN_TEXT}`;
+        return `You selected task "${task.name}"" ${PLAN_TEXT}`;
     }
 
     /**

@@ -111,7 +111,7 @@ export class Dev {
 
         ctx.ui.notify("TDD mode is now: RED");
 
-        return `task name: ${task.name}\ntask description: ${task.description}\nrequirements:\n${requirements}\n${DEV_TEXT}`;
+        return `task name: ${task.name}\nrequirements:\n${requirements}\n${DEV_TEXT}`;
     }
 
     stop(ctx: ExtensionContext) {
