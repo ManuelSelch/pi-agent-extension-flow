@@ -36,7 +36,7 @@ export class Flow {
         this.registerCommand_initialize();
         this.registerCommand_listTasks();
         this.registerCommand_addTask();
-        this.registerCommand_resumeSession();
+        this.registerCommand_resumeFlow();
         this.registerTool_listTasks();
         this.registerTool_selectTask();
         this.registerTool_startDev();
@@ -66,7 +66,7 @@ export class Flow {
         this.sendMessage(message);
     }
 
-    //#region initialize
+    //#region command: initialize
     private registerCommand_initialize() {
         this.pi.registerCommand("initialize-flow", {
             description: "initialize agent flow",
@@ -83,28 +83,10 @@ export class Flow {
     }
     //#endregion
 
-    //#region command: list-tasks
-    private registerCommand_listTasks() {
-        this.pi.registerCommand("list-tasks", {
-            description: "list all open tasks from tasks.md",
-            handler: async (_, ctx) => {
-                const tasks = await this.taskStorage.getTasks();
-                
-                if (tasks.length === 0) {
-                    ctx.ui.notify("No open tasks found", "info");
-                } else {
-                    const taskList = tasks.map(t => `• ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
-                    ctx.ui.notify(`Open tasks:\n${taskList}`, "info");
-                }
-            }
-        });
-    }
-    //#endregion
-
-    //#region command: resume-session
-    private registerCommand_resumeSession() {
-        this.pi.registerCommand("resume-session", {
-            description: "resume the current session from session.json",
+    //#region command: resume
+    private registerCommand_resumeFlow() {
+        this.pi.registerCommand("resume-flow", {
+            description: "resume the current flow from session.json",
             handler: async (_, ctx) => {
                 const sessionData = await this.session.readSession();
                 if (!sessionData) {
@@ -137,6 +119,25 @@ export class Flow {
                         break;
                     default:
                         ctx.ui.notify(`Unknown session status: ${sessionData.status}`, "error");
+                }
+            }
+        });
+    }
+    //#endregion
+
+
+    //#region command: list-tasks
+    private registerCommand_listTasks() {
+        this.pi.registerCommand("list-tasks", {
+            description: "list all open tasks from tasks.md",
+            handler: async (_, ctx) => {
+                const tasks = await this.taskStorage.getTasks();
+                
+                if (tasks.length === 0) {
+                    ctx.ui.notify("No open tasks found", "info");
+                } else {
+                    const taskList = tasks.map(t => `• ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
+                    ctx.ui.notify(`Open tasks:\n${taskList}`, "info");
                 }
             }
         });
@@ -230,6 +231,7 @@ export class Flow {
     }
     //#endregion
 
+
     
     //#region start dev
     private registerTool_startDev() {
@@ -300,6 +302,8 @@ export class Flow {
     }
     //#endregion
 
+
+    
     //#region helper
     private sendMessage(msg: string) {
         // sends user message to agent
