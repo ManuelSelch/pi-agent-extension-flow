@@ -58,30 +58,34 @@ export class TDD {
 
             this.didEdit = false;
 
-            ctx.ui.notify("Running tests...", "info");
-
-            try {
-                const { stdout, stderr } = await execAsync("npm test", {
-                    cwd: process.cwd(),
-                    timeout: 5_000 
-                });
-
-                const testOutput = stdout + (stderr ? `\n${stderr}` : '');
-                const testPassed = !stderr.includes('FAIL') && !stderr.includes('failed');
-
-                const feedbackMessage = this.formatTestFeedback(testPassed, testOutput, this.currentMode);
-                
-                this.pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
-                
-            } catch(error: any) {
-                let errorMessage = (error as Error).message;
-
-                ctx.ui.notify("✗ Tests failed", "error");
-                const feedbackMessage = this.formatTestFeedback(false, errorMessage, this.currentMode);
-
-                this.pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
-            }
+            const feedback = await this.runTests(ctx);
+            this.pi.sendUserMessage(feedback, {deliverAs: "steer"});
         })
+    }
+
+    async runTests(ctx: ExtensionContext): Promise<string> {
+        ctx.ui.notify("Running tests...", "info");
+
+        try {
+            const { stdout, stderr } = await execAsync("npm test", {
+                cwd: process.cwd(),
+                timeout: 5_000 
+            });
+
+            const testOutput = stdout + (stderr ? `\n${stderr}` : '');
+            const testPassed = !stderr.includes('FAIL') && !stderr.includes('failed');
+
+            const feedbackMessage = this.formatTestFeedback(testPassed, testOutput, this.currentMode);
+            
+            return feedbackMessage;
+            
+        } catch(error: any) {
+            let errorMessage = JSON.stringify(error);
+
+            const feedbackMessage = this.formatTestFeedback(false, errorMessage, this.currentMode);
+
+            return feedbackMessage;
+        }
     }
 
     start(ctx: ExtensionContext) {
@@ -102,7 +106,7 @@ export class TDD {
         const modeGuidance = this.getModeGuidance(mode, passed);
         
         return `
-            ## Test Results (TDD ${mode} phase) 
+            ## Test Results (TDD ${Mode[mode]} phase) 
             **Status:** ${passed ? '✓ PASSED' : '✗ FAILED'}
             ${modeGuidance}
             \`\`\`
