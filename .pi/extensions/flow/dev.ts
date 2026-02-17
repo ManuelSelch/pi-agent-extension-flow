@@ -1,6 +1,7 @@
 import { ExtensionAPI, ExtensionContext, isToolCallEventType } from "@mariozechner/pi-coding-agent";
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
+import { Session } from "./session";
 
 const execAsync = promisify(exec)
 
@@ -24,8 +25,9 @@ When you finished this task, then use the review-task tool to let the user revie
 
 // Dev mode using TDD (test-driven-development) style
 export class Dev {
-    constructor(pi: ExtensionAPI) {
+    constructor(pi: ExtensionAPI, session: Session) {
         this.pi = pi;
+        this.session = session;
     }
 
     register() {
@@ -100,9 +102,11 @@ export class Dev {
         }
     }
 
-    start(ctx: ExtensionContext): string {
+    async start(ctx: ExtensionContext): Promise<string> {
         this.isEnabled = true;
         this.currentMode = Mode.RED;
+
+        await this.session.updateStatus("developing");
 
         ctx.ui.notify("TDD mode is now: RED");
 
@@ -156,6 +160,8 @@ export class Dev {
 
 
     private pi: ExtensionAPI;
+    private session: Session;
+
     private isEnabled = false;
     private didEdit = false;
     private waitingForAgentResponse = false;

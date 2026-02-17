@@ -27,9 +27,9 @@ export class Flow {
         this.taskStorage = new TaskStorage(resolve(process.cwd(), 'tasks.md'));
         this.session = new Session(resolve(process.cwd(), 'session.json'));
 
-        this.dev = new Dev(pi);
-        this.review = new Review(pi);
         this.plan = new Plan(pi, this.session);
+        this.dev = new Dev(pi, this.session);
+        this.review = new Review(pi);
     }
 
     register() {
