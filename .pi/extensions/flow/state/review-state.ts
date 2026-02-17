@@ -51,11 +51,6 @@ export class ReviewState implements State {
         return REVIEW_PROMPT;
     }
 
-    canTransitionTo(targetState: string): boolean {
-        // Can transition to idle (success) or back to dev (failure)
-        return targetState === 'idle' || targetState === 'dev';
-    }
-
     /**
      * Run the review process.
      */

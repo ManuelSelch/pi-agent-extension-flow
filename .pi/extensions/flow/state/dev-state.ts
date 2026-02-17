@@ -75,11 +75,6 @@ export class DevState implements State {
         return DEV_PROMPT;
     }
 
-    canTransitionTo(targetState: string): boolean {
-        // Can only transition to review from dev
-        return targetState === 'review';
-    }
-
     /**
      * Run tests and return formatted feedback.
      */

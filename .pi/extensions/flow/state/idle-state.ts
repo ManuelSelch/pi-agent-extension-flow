@@ -35,9 +35,4 @@ export class IdleState implements State {
     getPrompt(task: Task): string {
         return IDLE_PROMPT;
     }
-
-    canTransitionTo(targetState: string): boolean {
-        // Can only transition to plan from idle
-        return targetState === 'plan';
-    }
 }

@@ -56,11 +56,6 @@ export class PlanState implements State {
         return PLAN_PROMPT;
     }
 
-    canTransitionTo(targetState: string): boolean {
-        // Can only transition to dev from plan
-        return targetState === 'dev';
-    }
-
     /**
      * Complete the planning phase.
      * Called by Flow when start-dev tool is used.

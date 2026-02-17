@@ -34,11 +34,6 @@ export interface State {
      * Get the prompt text for the agent in this state.
      */
     getPrompt(task: Task): string;
-    
-    /**
-     * Check if the flow can transition to another state.
-     */
-    canTransitionTo(targetState: string): boolean;
 }
 
 export type StateName = 'idle' | 'plan' | 'dev' | 'review';
