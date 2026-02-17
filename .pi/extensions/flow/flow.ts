@@ -230,11 +230,13 @@ export class Flow {
     private async selectTask(name: string, ctx: ExtensionContext): Promise<string> {
         if(this.currentMode != FlowMode.IDLE) return `FAILED: you are only allowed to select a task in IDLE mode, but you are currently in ${FlowMode[this.currentMode]}`
 
+        if(name == undefined || name.trim() == "") return `FAILED: you need to provide a name as parameter that defines the task name`
+
         const tasks = await this.taskStorage.getTasks();
         const selectedTask = tasks.find(t => t.name == name);
-        if(selectedTask == undefined) return `FAILED: your selected task does not exist. Use list-tasks tool to see open tasks and then try again the select-task tool`
+        if(selectedTask == undefined) return `FAILED: your selected task "${name}" does not exist. Use list-tasks tool to see open tasks and then try again the select-task tool`
 
-        const userConfirmedTask = await ctx.ui.confirm("Confirm Task", `selected task is ${selectedTask.name}`)
+        const userConfirmedTask = await ctx.ui.confirm("Confirm Task", `selected task is "${selectedTask.name}"`)
         if(!userConfirmedTask) return `FAILED: user denied selecting this task. Wait for user input before proceeding.`
 
         this.currentTask = selectedTask;
