@@ -45,16 +45,25 @@ export class Flow {
         this.dev.register();
 
         this.pi.on("agent_end", async (event, ctx) => {
-            if(this.currentMode == FlowMode.IDLE) return;
-
-            let message = `You are not done yet. Your current mode is: ${FlowMode[this.currentMode]}. `;
-            if(this.currentMode == FlowMode.PLAN) {
-                message += `In PLAN mode you have to analyze the task requirements. When analysis is complete, use the start-dev tool with your gathered requirements to proceed to development.`;
-            } else if(this.currentMode == FlowMode.DEV) {
-                message += `In DEV mode you have to implement your task. When you are done, then call the review-task tool to review your code.`;
-            }
-            this.sendMessage(message);
+            await this.verifyAgentIsDone();
         })
+    }
+
+    private async verifyAgentIsDone() {
+        const tasksAreEmpty = (await this.taskStorage.getTasks()).length == 0;
+
+        if(this.currentMode == FlowMode.IDLE && tasksAreEmpty) return;
+
+        let message = `You are not done yet. Your current mode is: ${FlowMode[this.currentMode]}. `;
+
+        if(this.currentMode == FlowMode.IDLE)
+            message += `In IDLE mode you have to select the next open task using list-tasks tool and select-task tool`;
+        if(this.currentMode == FlowMode.PLAN)
+            message += `In PLAN mode you have to analyze the task requirements. When analysis is complete, use the start-dev tool with your gathered requirements to proceed to development.`;
+        else if(this.currentMode == FlowMode.DEV)
+            message += `In DEV mode you have to implement your task. When you are done, then call the review-task tool to review your code.`;
+
+        this.sendMessage(message);
     }
 
     //#region initialize
