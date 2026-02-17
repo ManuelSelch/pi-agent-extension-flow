@@ -29,10 +29,13 @@ export class Flow {
     }
 
     register() {
-        this.registerCommand_initialize();
+        this.registerCommand_start();
+        this.registerCommand_resume();
+        this.registerCommand_stop();
+
         this.registerCommand_listTasks();
         this.registerCommand_addTask();
-        this.registerCommand_resumeFlow();
+        
         this.registerTool_listTasks();
         this.registerTool_selectTask();
         this.registerTool_startDev();
@@ -63,27 +66,27 @@ export class Flow {
     }
 
     //#region command: initialize
-    private registerCommand_initialize() {
-        this.pi.registerCommand("initialize-flow", {
-            description: "initialize agent flow",
+    private registerCommand_start() {
+        this.pi.registerCommand("start-flow", {
+            description: "start agent flow",
             handler: async (_, ctx) => {
-                ctx.ui.notify("dev flow enabled", "info");
-                this.initialize(ctx);
+                ctx.ui.notify("start flow", "info");
+
+                this.isEnabled = true;
+                this.switchMode(FlowMode.IDLE, ctx);
+                this.sendMessage(this.idle.start());
             }
         })
-    }
-
-    private initialize(ctx: ExtensionContext) {
-        this.switchMode(FlowMode.IDLE, ctx);
-        this.sendMessage(this.idle.start());
     }
     //#endregion
 
     //#region command: resume
-    private registerCommand_resumeFlow() {
+    private registerCommand_resume() {
         this.pi.registerCommand("resume-flow", {
             description: "resume the current flow from session.json",
             handler: async (_, ctx) => {
+                ctx.ui.notify("resume flow", "info");
+
                 const sessionData = await this.session.readSession();
                 if (!sessionData) {
                     ctx.ui.notify("No active session found. Start a new session by selecting a task.", "error");
@@ -121,6 +124,18 @@ export class Flow {
     }
     //#endregion
 
+    //#region stop
+    private registerCommand_stop() {
+        this.pi.registerCommand("stop-flow", {
+            description: "stops agent flow",
+            handler: async (_, ctx) => {
+                ctx.ui.notify("stop flow", "info");
+
+                this.isEnabled = false;
+            }
+        });
+    }
+    //#endregion
 
     //#region command: list-tasks
     private registerCommand_listTasks() {
@@ -322,6 +337,7 @@ export class Flow {
     private dev: Dev;
     private review: Review;
 
+    private isEnabled = false;
     private currentMode = FlowMode.IDLE;
     private currentTask: Task | undefined = undefined;
     //#endregion
