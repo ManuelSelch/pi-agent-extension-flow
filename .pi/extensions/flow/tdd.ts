@@ -1,124 +1,149 @@
-import { ExtensionAPI, isToolCallEventType } from "@mariozechner/pi-coding-agent"
+import { ExtensionAPI, ExtensionContext, isToolCallEventType } from "@mariozechner/pi-coding-agent";
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
-import { Flow, FlowMode } from "./flow"
 
 const execAsync = promisify(exec)
 
-
-enum TDDMode {
+enum Mode {
   RED,
   GREEN,
   REFACTOR
 }
 
-let isEnabled = false
-let currentMode = FlowMode.IDLE
-let currentTDDMode = TDDMode.RED
-let waitingForAgentResponse = false // track if waiting for agent to finish
-let didEdit = false
-
-
-export default function (pi: ExtensionAPI) {
-    pi.registerCommand("dev-flow", {
-        description: "toggle dev agent flow",
-        handler: async (_, ctx) => {
-            isEnabled = !isEnabled;
-            ctx.ui.notify(isEnabled ? "dev flow enabled": "dev flow disabled", "info");
-
-            if(!isEnabled) return;
-
-            currentMode = FlowMode.IDLE;
-            sendMessage("");
-        }
-    })
-
-    // verify writes to src / test folder
-    pi.on("tool_call", (event, ctx) => {
-        if(isToolCallEventType("bash", event)) {
-        if(event.input.command.includes("ls -R"))
-            return { block: true, reason: "you are not allowed to use recursive bash comand ls -R, use ls tool instead" }
-        }
-
-        if(!isEnabled) return;
-
-        let path = "";
-        if(isToolCallEventType("write", event))
-        path = event.input.path;
-        else if(isToolCallEventType("edit", event))
-        path = event.input.path;
-        else 
-        return;
-
-        switch(currentTDDMode) {
-            case TDDMode.RED:
-                if(isSrcFolder(path))
-                    return { block: true, reason: "in RED TDD mode, you are only allowed to edit test folder and not src folder" }
-                break;
-            
-            case TDDMode.GREEN:
-                if(isTestFolder(path))
-                    return { block: true, reason: "in GREEN TDD mode, you are only allowed to edit src folder and not test folder" }
-                break;
-
-            case TDDMode.REFACTOR:
-                if(isTestFolder(path))
-                    return { block: true, reason: "in REFACTOR TDD mode, you are only allowed to edit src folder and not test folder" }
-                break;
-        }
-
-        didEdit = true;
-    })
-
-    // check if iteration done
-    pi.on("agent_end", (event, ctx) => {
-        if(!isEnabled) return;
-
-        if(event.messages.join("\n").includes("[DONE]")) {
-        waitingForAgentResponse = false;
-        ctx.ui.notify("TDD COMPLETE", "info");
-        }
-    })
-
-    // run tests after each turn
-    pi.on("tool_execution_end", async (event, ctx) => {
-        if(!isEnabled) return;
-        if(waitingForAgentResponse) return;
-
-        if(!didEdit) return;
-
-        didEdit = false;
-
-        ctx.ui.notify("Running tests...", "info");
-
-        try {
-        const { stdout, stderr } = await execAsync("npm test", {
-            cwd: process.cwd(),
-            timeout: 5_000 
-        });
-
-        const testOutput = stdout + (stderr ? `\n${stderr}` : '');
-        const testPassed = !stderr.includes('FAIL') && !stderr.includes('failed');
-
-        const feedbackMessage = formatTestFeedback(testPassed, testOutput, currentTDDMode);
-        
-        pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
-        
-        } catch(error: any) {
-        let errorMessage = (error as Error).message;
-
-        ctx.ui.notify("✗ Tests failed", "error");
-        const feedbackMessage = formatTestFeedback(false, errorMessage, currentTDDMode);
-
-        pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
-        }
-    })
-
-    function sendMessage(msg: string) {
-        // sends user message to agent
-        pi.sendUserMessage(msg, {deliverAs: "steer"});
+// TDD (test-driven-development) flow
+export class TDD {
+    constructor(pi: ExtensionAPI) {
+        this.pi = pi;
     }
+
+    register() {
+        // verify writes to src / test folder
+        this.pi.on("tool_call", (event, ctx) => {
+            if(!this.isEnabled) return;
+    
+            let path = "";
+            if(isToolCallEventType("write", event))
+            path = event.input.path;
+            else if(isToolCallEventType("edit", event))
+            path = event.input.path;
+            else 
+            return;
+    
+            switch(this.currentMode) {
+                case Mode.RED:
+                    if(isSrcFolder(path))
+                        return { block: true, reason: "in RED TDD mode, you are only allowed to edit test folder and not src folder" }
+                    break;
+                
+                case Mode.GREEN:
+                    if(isTestFolder(path))
+                        return { block: true, reason: "in GREEN TDD mode, you are only allowed to edit src folder and not test folder" }
+                    break;
+    
+                case Mode.REFACTOR:
+                    if(isTestFolder(path))
+                        return { block: true, reason: "in REFACTOR TDD mode, you are only allowed to edit src folder and not test folder" }
+                    break;
+            }
+    
+            this.didEdit = true;
+        })
+
+        // run tests after each turn
+        this.pi.on("tool_result", async (event, ctx) => {
+            if(!this.isEnabled) return;
+            if(this.waitingForAgentResponse) return;
+
+            if(!this.didEdit) return;
+
+            this.didEdit = false;
+
+            ctx.ui.notify("Running tests...", "info");
+
+            try {
+                const { stdout, stderr } = await execAsync("npm test", {
+                    cwd: process.cwd(),
+                    timeout: 5_000 
+                });
+
+                const testOutput = stdout + (stderr ? `\n${stderr}` : '');
+                const testPassed = !stderr.includes('FAIL') && !stderr.includes('failed');
+
+                const feedbackMessage = this.formatTestFeedback(testPassed, testOutput, this.currentMode);
+                
+                this.pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
+                
+            } catch(error: any) {
+                let errorMessage = (error as Error).message;
+
+                ctx.ui.notify("✗ Tests failed", "error");
+                const feedbackMessage = this.formatTestFeedback(false, errorMessage, this.currentMode);
+
+                this.pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
+            }
+        })
+    }
+
+    start(ctx: ExtensionContext) {
+        this.isEnabled = true;
+        this.currentMode = Mode.RED;
+
+        ctx.ui.notify("TDD mode is now: RED");
+    }
+
+    stop(ctx: ExtensionContext) {
+        this.isEnabled = false;
+        ctx.ui.notify("TDD stopped");
+    }
+    
+
+
+    private formatTestFeedback(passed: boolean, output: string, mode: Mode): string {
+        const modeGuidance = this.getModeGuidance(mode, passed);
+        
+        return `
+            ## Test Results (TDD ${mode} phase) 
+            **Status:** ${passed ? '✓ PASSED' : '✗ FAILED'}
+            ${modeGuidance}
+            \`\`\`
+            ${output.trim()}
+            \`\`\`
+        `
+    }
+
+
+    private getModeGuidance(mode: Mode, passed: boolean): string {
+        if (passed) {
+            switch(mode) {
+            case Mode.RED:
+                return "Tests should fail in RED mode. If they're not failing for the right reasons, adjust your test.";
+            case Mode.GREEN:
+                this.currentMode = Mode.REFACTOR;
+                return "✓ Tests are passing! Mode will advance to REFACTOR - improve code quality without breaking tests.";
+            case Mode.REFACTOR:
+                return "✓ Tests still passing after refactor! Ready for the next RED cycle. If you are DONE with refactoring reply with [DONE]";
+            }
+        } else {
+            switch(mode) {
+            case Mode.RED:
+                this.currentMode = Mode.GREEN;
+                return "✓ Tests are now failing as expected. Mode will advance to GREEN - implement the minimum code to make tests pass.";
+            case Mode.GREEN:
+                return "⚠ Tests are failing. Continue implementing until all tests pass.";
+            case Mode.REFACTOR:
+                return "⚠ Tests broke during refactor! Fix the code to restore green tests.";
+            }
+        }
+    }
+
+
+    private pi: ExtensionAPI;
+    private isEnabled = false;
+    private didEdit = false;
+    private waitingForAgentResponse = false;
+    private currentMode: Mode = Mode.RED;
 }
+
 
 function isSrcFolder(path: string) {
     return path.includes("src") && !path.includes("test");
@@ -128,41 +153,3 @@ function isTestFolder(path: string) {
     return path.includes("test");
 }
 
-function formatTestFeedback(passed: boolean, output: string, mode: TDDMode): string {
-  const modeGuidance = getModeGuidance(mode, passed);
-  
-  return `
-    ## Test Results (TDD ${mode} phase) 
-    **Status:** ${passed ? '✓ PASSED' : '✗ FAILED'}
-    ${modeGuidance}
-    \`\`\`
-    ${output.trim()}
-    \`\`\`
-  `
-}
-
-
-function getModeGuidance(mode: TDDMode, passed: boolean): string {
-  if (passed) {
-    switch(mode) {
-      case TDDMode.RED:
-        return "Tests should fail in RED mode. If they're not failing for the right reasons, adjust your test.";
-      case TDDMode.GREEN:
-        currentTDDMode = TDDMode.REFACTOR;
-        return "✓ Tests are passing! Mode will advance to REFACTOR - improve code quality without breaking tests.";
-      case TDDMode.REFACTOR:
-        waitingForAgentResponse = true;
-        return "✓ Tests still passing after refactor! Ready for the next RED cycle. If you are DONE with refactoring reply with [DONE]";
-    }
-  } else {
-    switch(mode) {
-      case TDDMode.RED:
-        currentTDDMode = TDDMode.GREEN;
-        return "✓ Tests are now failing as expected. Mode will advance to GREEN - implement the minimum code to make tests pass.";
-      case TDDMode.GREEN:
-        return "⚠ Tests are failing. Continue implementing until all tests pass.";
-      case TDDMode.REFACTOR:
-        return "⚠ Tests broke during refactor! Fix the code to restore green tests.";
-    }
-  }
-}
