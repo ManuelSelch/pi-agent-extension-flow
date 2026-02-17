@@ -294,7 +294,7 @@ export class Flow {
         if(!result.success)
             return `FAILED: ${result.feedback}. Your review got rejected. You are back still in DEV. Fix all review suggestions and then run review-task tool again. Do it autonomously without asking for user permission.`
 
-        this.taskStorage.deleteTask(this.currentTask!.name);
+        this.taskStorage.completeTask(this.currentTask!.name);
         this.switchMode(FlowMode.IDLE, ctx);
         return `SUCCESS: ${result.feedback}. You are done with this task.  ${IDLE_TEXT}`
     }

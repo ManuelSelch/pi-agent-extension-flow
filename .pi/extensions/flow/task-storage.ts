@@ -58,10 +58,10 @@ export class TaskStorage {
     }
 
     /**
-     * Delete a task from the tasks.md file by marking it as completed.
+     * complets a task from the tasks.md file by marking it as completed.
      * This preserves the task history while marking it as done.
      */
-    async deleteTask(taskName: string): Promise<void> {
+    async completeTask(taskName: string): Promise<void> {
         try {
             await access(this.taskFilePath);
             let content = await readFile(this.taskFilePath, 'utf-8');
