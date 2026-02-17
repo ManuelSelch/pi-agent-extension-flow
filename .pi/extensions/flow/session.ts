@@ -41,7 +41,6 @@ export class Session {
         }
 
         session.requirements = requirements;
-        session.status = 'developing';
         await this.writeSession(session);
     }
 

@@ -36,6 +36,7 @@ export class Flow {
         this.registerCommand_initialize();
         this.registerCommand_listTasks();
         this.registerCommand_addTask();
+        this.registerCommand_resumeSession();
         this.registerTool_listTasks();
         this.registerTool_selectTask();
         this.registerTool_startDev();
@@ -85,6 +86,48 @@ export class Flow {
                 } else {
                     const taskList = tasks.map(t => `• ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
                     ctx.ui.notify(`Open tasks:\n${taskList}`, "info");
+                }
+            }
+        });
+    }
+    //#endregion
+
+    //#region command: resume-session
+    private registerCommand_resumeSession() {
+        this.pi.registerCommand("resume-session", {
+            description: "resume the current session from session.json",
+            handler: async (_, ctx) => {
+                const sessionData = await this.session.readSession();
+                if (!sessionData) {
+                    ctx.ui.notify("No active session found. Start a new session by selecting a task.", "error");
+                    return;
+                }
+
+                // Reconstruct the task from session data
+                this.currentTask = {
+                    name: sessionData.taskName,
+                    description: sessionData.taskDescription
+                };
+
+                // Resume based on status
+                switch (sessionData.status) {
+                    case 'planning':
+                        this.switchMode(FlowMode.PLAN, ctx);
+                        await this.plan.start(this.currentTask, ctx);
+                        ctx.ui.notify(`Resumed planning session for task: ${this.currentTask.name}`, "info");
+                        break;
+                    case 'developing':
+                        this.switchMode(FlowMode.DEV, ctx);
+                        this.tdd.start(ctx);
+                        ctx.ui.notify(`Resumed development session for task: ${this.currentTask.name}`, "info");
+                        break;
+                    case 'reviewing':
+                        this.switchMode(FlowMode.REVIEW, ctx);
+                        await this.review.review(ctx);
+                        ctx.ui.notify(`Resumed review session for task: ${this.currentTask.name}`, "info");
+                        break;
+                    default:
+                        ctx.ui.notify(`Unknown session status: ${sessionData.status}`, "error");
                 }
             }
         });
