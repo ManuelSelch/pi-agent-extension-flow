@@ -1,4 +1,4 @@
-import { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
 export enum FlowMode {
@@ -68,8 +68,8 @@ export class DevFlow {
                 name: Type.String({description: "the task name to select"})
             }),
 
-            execute: async (_toolCallId, params, _signal, _onUpdate, _ctx) => {
-                const result = this.selectTask(params.name);
+            execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
+                const result = await this.selectTask(params.name, ctx);
                 return {
                     content: [{ type: "text", text: result }],
                     details: {},
@@ -78,18 +78,25 @@ export class DevFlow {
         });
     }
 
-    private selectTask(name: string): string {
+    private async selectTask(name: string, ctx: ExtensionContext): Promise<string> {
         if(this.currentMode != FlowMode.IDLE) return `FAILED: you are only allowed to select a task in IDLE mode, but you are currently in ${FlowMode[this.currentMode]}`
 
-        this.currentTask = this.tasks.find(t => t.name == name);
-        if(this.currentTask == undefined) return `FAILED: your selected task does not exist. Use list-tasks tool to see open tasks and then try again the select-task tool`
+        const selectedTask = this.tasks.find(t => t.name == name);
+        if(selectedTask == undefined) return `FAILED: your selected task does not exist. Use list-tasks tool to see open tasks and then try again the select-task tool`
 
-        const index = this.tasks.indexOf(this.currentTask);
-        if (index !== -1) this.tasks.splice(index, 1);
+        const userConfirmedTask = await ctx.ui.confirm("Confirm Task", `selected task is ${selectedTask}`)
+        if(!userConfirmedTask) return `FAILED: user denied selecting this task. Wait for user input before proceeding.`
 
+        this.currentTask = selectedTask;
         this.currentMode = FlowMode.DEV;
+        this.deleteTask(selectedTask);
 
         return `SUCCESS: you selected task "${name}". Task description: "${this.currentTask.description}". You are now in DEV mode to implement the selected task.`
+    }
+
+    private deleteTask(task: Task) {
+        const index = this.tasks.indexOf(task);
+        if (index !== -1) this.tasks.splice(index, 1);
     }
     //#endregion
 
