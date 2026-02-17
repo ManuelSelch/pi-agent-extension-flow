@@ -132,7 +132,7 @@ export class Flow {
     }
     //#endregion
 
-    //#region stop
+    //#region command: stop
     private registerCommand_stop() {
         this.pi.registerCommand("stop-flow", {
             description: "stops agent flow",
@@ -147,6 +147,8 @@ export class Flow {
         });
     }
     //#endregion
+
+
 
     //#region command: list-tasks
     private registerCommand_listTasks() {
