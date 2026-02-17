@@ -50,7 +50,7 @@ export class TDD {
         })
 
         // run tests after each turn
-        this.pi.on("tool_execution_end", async (event, ctx) => {
+        this.pi.on("tool_result", async (event, ctx) => {
             if(!this.isEnabled) return;
             if(this.waitingForAgentResponse) return;
 
