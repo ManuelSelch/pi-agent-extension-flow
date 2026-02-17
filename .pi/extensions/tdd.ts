@@ -5,12 +5,12 @@ import { promisify } from "node:util"
 const execAsync = promisify(exec)
 
 const enum Mode {
-  Red = 'red',
-  Green = 'green',
-  Refactor = 'refactor',
+  Red,
+  Green,
+  Refactor
 }
 
-let isTDD = false
+let isEnabled = false
 let currentMode = Mode.Red
 let waitingForAgentResponse = false // track if waiting for agent to finish
 let didEdit = false
@@ -18,16 +18,16 @@ let didEdit = false
 export default function (pi: ExtensionAPI) {
   pi.registerCommand("tdd", {
     description: "toggle TDD agent flow",
-    handler: async (_iterSSEMessages, ctx) => {
-        isTDD = !isTDD;
+    handler: async (_, ctx) => {
+        isEnabled = !isEnabled;
         
-        ctx.ui.notify(isTDD ? "TDD enabled": "TDD disabled", "info");
+        ctx.ui.notify(isEnabled ? "TDD enabled": "TDD disabled", "info");
     }
   })
 
   pi.registerCommand("tdd-red", {
     description: "set TDD mode to RED",
-    handler: async (_iterSSEMessages, ctx) => {
+    handler: async (_, ctx) => {
         currentMode = Mode.Red;
         ctx.ui.notify("TDD mode is RED", "info");
     }
@@ -35,7 +35,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("tdd-green", {
     description: "set TDD mode to GREEN",
-    handler: async (_iterSSEMessages, ctx) => {
+    handler: async (_, ctx) => {
         currentMode = Mode.Green;
         ctx.ui.notify("TDD mode is GREEN", "info");
     }
@@ -43,7 +43,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("tdd-refactor", {
     description: "set TDD mode to REFACTOR",
-    handler: async (_iterSSEMessages, ctx) => {
+    handler: async (_, ctx) => {
         currentMode = Mode.Refactor;
         ctx.ui.notify("TDD mode is REFACTOR", "info");
     }
@@ -56,7 +56,7 @@ export default function (pi: ExtensionAPI) {
         return { block: true, reason: "you are not allowed to use recursive bash comand ls -R, use ls tool instead" }
     }
 
-    if(!isTDD) return;
+    if(!isEnabled) return;
 
     let path = "";
     if(isToolCallEventType("write", event))
@@ -88,7 +88,7 @@ export default function (pi: ExtensionAPI) {
 
   // check if iteration done
   pi.on("agent_end", (event, ctx) => {
-    if(!isTDD) return;
+    if(!isEnabled) return;
 
     if(event.messages.join("\n").includes("[DONE]")) {
       waitingForAgentResponse = false;
@@ -98,7 +98,7 @@ export default function (pi: ExtensionAPI) {
 
   // run tests after each turn
   pi.on("tool_execution_end", async (event, ctx) => {
-    if(!isTDD) return;
+    if(!isEnabled) return;
     if(waitingForAgentResponse) return;
 
     if(!didEdit) return;
@@ -144,7 +144,7 @@ function formatTestFeedback(passed: boolean, output: string, mode: Mode): string
   const modeGuidance = getModeGuidance(mode, passed);
   
   return `
-    ## Test Results (TDD ${mode.toUpperCase()} phase) 
+    ## Test Results (TDD ${mode} phase) 
     **Status:** ${passed ? '✓ PASSED' : '✗ FAILED'}
     ${modeGuidance}
     \`\`\`
