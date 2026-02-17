@@ -22,14 +22,10 @@ export type PlanResult = {
 
 export class PlanState implements State {
     readonly name: StateName = 'plan';
-    
-    private isEnabled = false;
 
     constructor(private session: Session) {}
 
-    async onEnter(task: Task, ctx: ExtensionContext): Promise<string> {
-        this.isEnabled = true;
-        
+    async onEnter(task: Task, ctx: ExtensionContext): Promise<string> {        
         // Start a new session for this task
         await this.session.startSession(task.name);
         
@@ -39,13 +35,10 @@ export class PlanState implements State {
     }
 
     async onExit(ctx: ExtensionContext): Promise<void> {
-        this.isEnabled = false;
         ctx.ui.notify("Flow: Leaving PLAN", "info");
     }
 
     async onToolCall(event: ToolCallEvent, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
-        if (!this.isEnabled) return;
-
         // Block write and edit tools in PLAN mode
         if (event.toolName === 'write' || event.toolName === 'edit') {
             return {

@@ -27,7 +27,6 @@ When you finished this task, then use the review-task tool to let the user revie
 export class DevState implements State {
     readonly name: StateName = 'dev';
     
-    private isEnabled = false;
     private tddMode: TddMode = TddMode.RED;
     private didEdit = false;
     private waitingForAgentResponse = false;
@@ -35,7 +34,6 @@ export class DevState implements State {
     constructor(private pi: ExtensionAPI, private session: Session) {}
 
     async onEnter(task: Task, ctx: ExtensionContext): Promise<string> {
-        this.isEnabled = true;
         this.tddMode = TddMode.RED;
         this.didEdit = false;
         
@@ -48,13 +46,10 @@ export class DevState implements State {
     }
 
     async onExit(ctx: ExtensionContext): Promise<void> {
-        this.isEnabled = false;
         ctx.ui.notify("Flow: Leaving DEV", "info");
     }
 
-    async onToolCall(event: ToolCallEvent, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {
-        if (!this.isEnabled) return;
-        
+    async onToolCall(event: ToolCallEvent, ctx: ExtensionContext): Promise<{ block: boolean; reason?: string } | void> {        
         // Only handle write/edit for TDD restrictions
         if (event.toolName !== 'write' && event.toolName !== 'edit') return;
         
@@ -62,22 +57,13 @@ export class DevState implements State {
         
         switch (this.tddMode) {
             case TddMode.RED:
-                if (isSrcFolder(path)) {
-                    return {
-                        block: true,
-                        reason: "In RED TDD mode, you are only allowed to edit test folder and not src folder"
-                    };
-                }
-                break;
-                
+                if (isSrcFolder(path))
+                    return { block: true, reason: "In RED TDD mode, you are only allowed to edit test folder and not src folder" };
+                break;    
             case TddMode.GREEN:
             case TddMode.REFACTOR:
-                if (isTestFolder(path)) {
-                    return {
-                        block: true,
-                        reason: `In ${TddMode[this.tddMode]} TDD mode, you are only allowed to edit src folder and not test folder`
-                    };
-                }
+                if (isTestFolder(path)) 
+                    return { block: true, reason: `In ${TddMode[this.tddMode]} TDD mode, you are only allowed to edit src folder and not test folder` };
                 break;
         }
         
@@ -86,7 +72,6 @@ export class DevState implements State {
     }
 
     async onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void> {
-        if (!this.isEnabled) return;
         if (this.waitingForAgentResponse) return;
         if (!this.didEdit) return;
         
