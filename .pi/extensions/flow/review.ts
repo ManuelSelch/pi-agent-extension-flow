@@ -16,7 +16,7 @@ export class Review {
     }
 
     //#region review task
-    async review(ctx: ExtensionContext): Promise<ReviewFeedback> {
+    async start(ctx: ExtensionContext): Promise<ReviewFeedback> {
         // const linter = await this.runLinter(ctx);
         // if(!linter.success) return linter;
 

@@ -123,7 +123,7 @@ export class Flow {
                         break;
                     case 'reviewing':
                         this.switchMode(FlowMode.REVIEW, ctx);
-                        await this.review.review(ctx);
+                        await this.review.start(ctx);
                         ctx.ui.notify(`Resumed review session for task: ${this.currentTask.name}`, "info");
                         break;
                     default:
@@ -281,7 +281,7 @@ export class Flow {
     } 
 
     private async reviewTask(ctx: ExtensionContext): Promise<string> {
-        const result = await this.review.review(ctx);
+        const result = await this.review.start(ctx);
 
         if(!result.success)
             return `FAILED: ${result.feedback}. Your review got rejected. You are back still in DEV. Fix all review suggestions and then run review-task tool again. Do it autonomously without asking for user permission.`
