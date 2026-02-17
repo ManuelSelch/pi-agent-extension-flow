@@ -78,8 +78,8 @@ export class TaskStorage {
      * Add a new task to the tasks.md file.
      * Creates the file if it doesn't exist.
      */
-    async addTask(name: string, description: string): Promise<void> {
-        const taskLine = `- [ ] ${name} - ${description}`;
+    async addTask(name: string): Promise<void> {
+        const taskLine = `- [ ] ${name}`;
         
         try {
             // Check if file exists

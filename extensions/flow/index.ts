@@ -47,7 +47,7 @@ export default function (pi: ExtensionAPI) {
             
             const description = await ctx.ui.input("Task description (optional)");
             
-            await taskStorage.addTask(name, description || '');
+            await taskStorage.addTask(name);
             ctx.ui.notify(`Task "${name}" added successfully`, "info");
         }
     });
