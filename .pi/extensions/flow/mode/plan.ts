@@ -89,6 +89,10 @@ export class Plan {
         };
     }
 
+    stop() {
+        this.isEnabled = false;
+    }
+
     private pi: ExtensionAPI;
     private session: Session;
     private isEnabled = false;

@@ -132,6 +132,9 @@ export class Flow {
                 ctx.ui.notify("stop flow", "info");
 
                 this.isEnabled = false;
+                this.idle.stop();
+                this.plan.stop();
+                this.dev.stop();
             }
         });
     }

@@ -114,9 +114,8 @@ export class Dev {
         return `task name: ${task.name}\nrequirements:\n${requirements}\n${DEV_TEXT}`;
     }
 
-    stop(ctx: ExtensionContext) {
+    stop() {
         this.isEnabled = false;
-        ctx.ui.notify("TDD stopped");
     }
     
 
