@@ -26,16 +26,12 @@ When you finished this task, then use the review-task tool to let the user revie
 
 export class DevState implements State {
     readonly name: StateName = 'dev';
-    
     private tddMode: TddMode = TddMode.RED;
-    private didEdit = false;
-    private waitingForAgentResponse = false;
 
     constructor(private pi: ExtensionAPI, private session: Session) {}
 
     async onEnter(task: Task, ctx: ExtensionContext): Promise<string> {
         this.tddMode = TddMode.RED;
-        this.didEdit = false;
         
         // Update session status
         await this.session.updateStatus('developing');
@@ -66,16 +62,10 @@ export class DevState implements State {
                     return { block: true, reason: `In ${TddMode[this.tddMode]} TDD mode, you are only allowed to edit src folder and not test folder` };
                 break;
         }
-        
-        this.didEdit = true;
-        return undefined;
     }
 
     async onToolResult(event: ToolResultEvent, ctx: ExtensionContext): Promise<void> {
-        if (this.waitingForAgentResponse) return;
-        if (!this.didEdit) return;
-        
-        this.didEdit = false;
+        if (event.toolName !== 'write' && event.toolName !== 'edit') return;
         
         // Run tests after edits
         const feedback = await this.runTests(ctx);
