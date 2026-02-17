@@ -63,7 +63,7 @@ export class Flow {
     }
 
     private async verifyAgentIsDone() {        
-        const tasksAreEmpty = (await this.taskStorage.getTasks()).length == 0;
+        const tasksAreEmpty = ((await this.taskStorage.getTasks()).filter(t => !t.isDone)).length == 0;
 
         if(this.currentMode == FlowMode.IDLE && tasksAreEmpty) return;
 
