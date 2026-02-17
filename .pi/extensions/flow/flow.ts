@@ -65,7 +65,7 @@ export class Flow {
         this.sendMessage(message);
     }
 
-    //#region command: initialize
+    //#region command: start
     private registerCommand_start() {
         this.pi.registerCommand("start-flow", {
             description: "start agent flow",
