@@ -1,8 +1,8 @@
 import { ExtensionAPI, ExtensionContext, isToolCallEventType } from "@mariozechner/pi-coding-agent";
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
-import { Session } from "./session";
-import { Task } from "./task-storage";
+import { Session } from "../util/session";
+import { Task } from "../util/task-storage";
 
 const execAsync = promisify(exec)
 

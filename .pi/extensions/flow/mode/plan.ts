@@ -1,6 +1,6 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Task } from "./task-storage";
-import { Session } from "./session";
+import { Task } from "../util/task-storage";
+import { Session } from "../util/session";
 import { resolve } from "node:path";
 
 export type PlanResult = {

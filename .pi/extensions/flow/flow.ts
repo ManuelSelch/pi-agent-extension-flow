@@ -1,11 +1,11 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { Review } from "./review";
-import { Plan } from "./plan";
-import { Dev } from "./dev";
+import { Review } from "./mode/review";
+import { Plan } from "./mode/plan";
+import { Dev } from "./mode/dev";
 import { resolve } from "node:path";
-import { Task, TaskStorage } from "./task-storage";
-import { Session } from "./session";
+import { Task, TaskStorage } from "./util/task-storage";
+import { Session } from "./util/session";
 
 export enum FlowMode {
   IDLE,

@@ -1,5 +1,5 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Session } from "./session";
+import { Session } from "../util/session";
 
 export type ReviewFeedback = {
     success: boolean,
