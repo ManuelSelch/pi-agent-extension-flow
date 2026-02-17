@@ -40,6 +40,7 @@ export class Flow {
 
         this.registerTool_selectTask();
         this.registerTool_startDev();
+        this.registerTool_addDevNote();
         this.registerTool_reviewTask();
 
         this.pi.on("agent_end", async (event, ctx) => {
@@ -106,8 +107,11 @@ export class Flow {
                     isDone: false
                 };
 
-                // Build resume message with description if available
+                // Build resume message with description and dev notes if available
                 const descriptionMsg = sessionData.description ? `\n\nTask Description: ${sessionData.description}` : '';
+                const devNotesMsg = sessionData.devNotes?.length 
+                    ? `\n\nPrevious Development Notes:\n${sessionData.devNotes.join('\n')}` 
+                    : '';
 
                 // Resume based on status
                 switch (sessionData.status) {
@@ -117,11 +121,11 @@ export class Flow {
                         break;
                     case 'developing':
                         ctx.ui.notify(`Resume development session for task: ${this.currentTask.name}`, "info");
-                        this.sendMessage(await this.transition("dev", ctx) + descriptionMsg);
+                        this.sendMessage(await this.transition("dev", ctx) + descriptionMsg + devNotesMsg);
                         break;
                     case 'reviewing':
                         ctx.ui.notify(`Resume review session for task: ${this.currentTask.name}`, "info");
-                        this.sendMessage(await this.transition("review", ctx) + descriptionMsg);
+                        this.sendMessage(await this.transition("review", ctx) + descriptionMsg + devNotesMsg);
                         break;
                     default:
                         ctx.ui.notify(`Unknown session status: ${sessionData.status}`, "error");
@@ -223,6 +227,36 @@ export class Flow {
             return `FAILED: ${result.requirements}. Planning phase was rejected. Continue analyzing the task.`
 
         return await this.transition("dev", ctx);
+    }
+    //#endregion
+
+    //#region add dev note
+    private registerTool_addDevNote() {
+        this.pi.registerTool({
+            name: "add-dev-note",
+            label: "add development note",
+            description: "add a development note to the session (only available in DEV mode)",
+            parameters: Type.Object({
+                note: Type.String({ description: "The development note to record" })
+            }),
+
+            execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
+                const result = await this.addDevNote(params.note, ctx);
+                return {
+                    content: [{ type: "text", text: result }],
+                    details: {},
+                };
+            },
+        });
+    }
+
+    private async addDevNote(note: string, ctx: ExtensionContext): Promise<string> {
+        if(this.currentState != "dev") return `FAILED: you are only allowed to add dev notes in DEV state, but you are currently in ${this.currentState} state`
+
+        if(!this.currentTask) return `FAILED: no task selected. Use select-task tool first.`
+
+        await this.session.addDevNote(note);
+        return `SUCCESS: Development note added to session.`;
     }
     //#endregion
 

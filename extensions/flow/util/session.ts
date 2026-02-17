@@ -5,6 +5,7 @@ export type SessionData = {
     description: string;
     requirements: string;
     status: 'planning' | 'developing' | 'reviewing';
+    devNotes: string[];
 };
 
 /**
@@ -23,10 +24,25 @@ export class Session {
             taskName,
             description,
             requirements: '',
-            status: 'planning'
+            status: 'planning',
+            devNotes: []
         };
 
         await this.writeSession(sessionData);
+    }
+
+    /**
+     * Add a development note to the session.
+     */
+    async addDevNote(note: string): Promise<void> {
+        const session = await this.readSession();
+        if (!session) {
+            throw new Error('No active session found. Start a session first.');
+        }
+
+        const timestamp = new Date().toISOString();
+        session.devNotes.push(`[${timestamp}] ${note}`);
+        await this.writeSession(session);
     }
 
     /**

@@ -22,6 +22,7 @@ RED DEV mode: write a failing test first.
 GREEN DEV mode: implement it to pass the test
 REFACTOR: refactor the code while keeping the tests passing
 When you finished this task, then use the review-task tool to let the user review it.
+While you are implementing this task store important development notes by calling the tool add-dev-note
 `;
 
 export class DevState implements State {
@@ -35,9 +36,15 @@ export class DevState implements State {
         // Update session status
         await this.session.updateStatus('developing');
         
+        // Load existing dev notes for context
+        const sessionData = await this.session.readSession();
+        const devNotesHeader = sessionData?.devNotes?.length 
+            ? `\n\nPrevious Development Notes:\n${sessionData.devNotes.join('\n')}\n` 
+            : '';
+        
         ctx.ui.notify("Flow: DEV state (TDD: RED)", "info");
         
-        return DEV_PROMPT;
+        return `${DEV_PROMPT}${devNotesHeader}`;
     }
 
     async onExit(ctx: ExtensionContext): Promise<void> {
