@@ -1,5 +1,7 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Task } from "./task-storage";
+import { Session } from "./session";
+import { resolve } from "node:path";
 
 export type PlanResult = {
     success: boolean,
@@ -15,7 +17,7 @@ Analyze the task requirements thoroughly:
 - Identify potential challenges
 - Plan your approach
 - Consider edge cases
-When you have completed the analysis and understand the requirements, use the start-dev tool to proceed to development.
+When you have completed the analysis and understand the requirements, use the start-dev tool with your gathered requirements to proceed to development.
 `
 
 /**
@@ -26,8 +28,9 @@ When you have completed the analysis and understand the requirements, use the st
  * - What approach should be taken
  */
 export class Plan {
-    constructor(pi: ExtensionAPI) {
+    constructor(pi: ExtensionAPI, session: Session) {
         this.pi = pi;
+        this.session = session;
     }
 
     register() {
@@ -42,24 +45,29 @@ export class Plan {
 
     /**
      * Start the planning phase for a task.
-     * Returns the analyzed requirements.
+     * Creates a new session and returns the planning instructions.
      */
-    start(task: Task, ctx: ExtensionContext): string {
+    async start(task: Task, ctx: ExtensionContext): Promise<string> {
         ctx.ui.notify(`Starting planning phase for: ${task.name}`, "info");
         
-        // In PLAN mode, the agent will analyze the task
-        // The actual planning logic is driven by the agent through messages
+        // Start a new session for this task
+        await this.session.startSession(task.name, task.description);
+        
+        // Enable tool blocking
+        this.isEnabled = true;
+        
         return `SUCCESS: you selected task "${task.name}". Task description: "${task.description}" ${PLAN_TEXT}`;
     }
 
     /**
      * Complete the planning phase and transition to DEV.
      * Called when agent has finished analyzing requirements.
+     * @param requirements The gathered requirements from planning analysis
      */
-    async complete(ctx: ExtensionContext): Promise<PlanResult> {
+    async complete(requirements: string, ctx: ExtensionContext): Promise<PlanResult> {
         const userConfirmed = await ctx.ui.confirm(
             "Planning Complete", 
-            "Has the task been properly analyzed and requirements understood?"
+            `Has the task been properly analyzed?\n\nRequirements:\n${requirements}`
         );
 
         if (!userConfirmed) {
@@ -69,12 +77,19 @@ export class Plan {
             };
         }
 
+        // Save requirements to session
+        await this.session.saveRequirements(requirements);
+        
+        // Disable tool blocking
+        this.isEnabled = false;
+
         return { 
             success: true, 
-            requirements: "Planning complete. Ready to proceed to development." 
+            requirements 
         };
     }
 
     private pi: ExtensionAPI;
+    private session: Session;
     private isEnabled = false;
 }

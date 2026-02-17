@@ -5,6 +5,7 @@ import { Plan } from "./plan";
 import { TDD } from "./tdd";
 import { resolve } from "node:path";
 import { Task, TaskStorage } from "./task-storage";
+import { Session } from "./session";
 
 export enum FlowMode {
   IDLE,
@@ -24,10 +25,11 @@ export class Flow {
     constructor(pi: ExtensionAPI) {
         this.pi = pi;
         this.taskStorage = new TaskStorage(resolve(process.cwd(), 'tasks.md'));
+        this.session = new Session(resolve(process.cwd(), 'session.json'));
 
         this.tdd = new TDD(pi);
         this.review = new Review(pi);
-        this.plan = new Plan(pi);
+        this.plan = new Plan(pi, this.session);
     }
 
     register() {
@@ -46,7 +48,7 @@ export class Flow {
 
             let message = `You are not done yet. Your current mode is: ${FlowMode[this.currentMode]}. `;
             if(this.currentMode == FlowMode.PLAN) {
-                message += `In PLAN mode you have to analyze the task requirements. When analysis is complete, use the start-dev tool to proceed to development.`;
+                message += `In PLAN mode you have to analyze the task requirements. When analysis is complete, use the start-dev tool with your gathered requirements to proceed to development.`;
             } else if(this.currentMode == FlowMode.DEV) {
                 message += `In DEV mode you have to implement your task. When you are done, then call the review-task tool to review your code.`;
             }
@@ -173,7 +175,7 @@ export class Flow {
         await this.deleteTask(selectedTask);
 
         this.switchMode(FlowMode.PLAN, ctx);
-        return this.plan.start(selectedTask, ctx);
+        return await this.plan.start(selectedTask, ctx);
     }
 
     private async deleteTask(task: Task): Promise<void> {
@@ -188,10 +190,12 @@ export class Flow {
             name: "start-dev",
             label: "start development",
             description: "complete planning phase and start development (only available in PLAN mode)",
-            parameters: Type.Object({}),
+            parameters: Type.Object({
+                requirements: Type.String({ description: "The requirements gathered during planning analysis" })
+            }),
 
-            execute: async (_toolCallId, _params, _signal, _onUpdate, ctx) => {
-                const result = await this.startDev(ctx);
+            execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
+                const result = await this.startDev(params.requirements, ctx);
                 return {
                     content: [{ type: "text", text: result }],
                     details: {},
@@ -200,12 +204,12 @@ export class Flow {
         });
     }
 
-    private async startDev(ctx: ExtensionContext): Promise<string> {
+    private async startDev(requirements: string, ctx: ExtensionContext): Promise<string> {
         if(this.currentMode != FlowMode.PLAN) return `FAILED: you are only allowed to start development in PLAN mode, but you are currently in ${FlowMode[this.currentMode]}`
 
         if(!this.currentTask) return `FAILED: no task selected. Use select-task tool first.`
 
-        const result = await this.plan.complete(ctx);
+        const result = await this.plan.complete(requirements, ctx);
 
         if(!result.success)
             return `FAILED: ${result.requirements}. Planning phase was rejected. Continue analyzing the task.`
@@ -259,7 +263,7 @@ export class Flow {
     //#region properties
     private pi: ExtensionAPI
     private taskStorage: TaskStorage;
-
+    private session: Session; 
     private tdd: TDD;
     private review: Review;
     private plan: Plan;
