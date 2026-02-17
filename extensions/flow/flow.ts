@@ -106,19 +106,22 @@ export class Flow {
                     isDone: false
                 };
 
+                // Build resume message with description if available
+                const descriptionMsg = sessionData.description ? `\n\nTask Description: ${sessionData.description}` : '';
+
                 // Resume based on status
                 switch (sessionData.status) {
                     case 'planning':
                         ctx.ui.notify(`Resume planning session for task: ${this.currentTask.name}`, "info");
-                        this.sendMessage(await this.transition("plan", ctx));
+                        this.sendMessage(await this.transition("plan", ctx) + descriptionMsg);
                         break;
                     case 'developing':
                         ctx.ui.notify(`Resume development session for task: ${this.currentTask.name}`, "info");
-                        this.sendMessage(await this.transition("dev", ctx));
+                        this.sendMessage(await this.transition("dev", ctx) + descriptionMsg);
                         break;
                     case 'reviewing':
                         ctx.ui.notify(`Resume review session for task: ${this.currentTask.name}`, "info");
-                        this.sendMessage(await this.transition("review", ctx));
+                        this.sendMessage(await this.transition("review", ctx) + descriptionMsg);
                         break;
                     default:
                         ctx.ui.notify(`Unknown session status: ${sessionData.status}`, "error");
@@ -177,9 +180,13 @@ export class Flow {
         const userConfirmedTask = await ctx.ui.confirm("Confirm Task", `selected task is "${selectedTask.name}"`)
         if(!userConfirmedTask) return `FAILED: user denied selecting this task. Wait for user input before proceeding.`
 
+        // Collect task description from user
+        const description = await ctx.ui.input("Task Description", "Add context or description for this task (optional):") ?? '';
+
         this.currentTask = selectedTask;
 
-        await this.transition("plan", ctx);
+        // Start session with description
+        await this.session.startSession(selectedTask.name, description);
 
         return await this.transition("plan", ctx);
     }

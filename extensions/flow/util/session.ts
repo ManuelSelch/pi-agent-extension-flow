@@ -2,6 +2,7 @@ import { readFile, writeFile, access } from "node:fs/promises";
 
 export type SessionData = {
     taskName: string;
+    description: string;
     requirements: string;
     status: 'planning' | 'developing' | 'reviewing';
 };
@@ -17,9 +18,10 @@ export class Session {
      * Start a new session for a task.
      * Creates the session.md file with initial state.
      */
-    async startSession(taskName: string): Promise<void> {
+    async startSession(taskName: string, description: string = ''): Promise<void> {
         const sessionData: SessionData = {
             taskName,
+            description,
             requirements: '',
             status: 'planning'
         };

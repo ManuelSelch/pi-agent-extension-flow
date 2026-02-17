@@ -24,12 +24,13 @@ export class PlanState implements State {
     constructor(private session: Session) {}
 
     async onEnter(task: Task, ctx: ExtensionContext): Promise<string> {        
-        // Start a new session for this task
-        await this.session.startSession(task.name);
+        // Session is already started in selectTask
+        const sessionData = await this.session.readSession();
+        const description = sessionData?.description ? `\n\nTask Description: ${sessionData.description}` : '';
         
         ctx.ui.notify(`Flow: PLAN state - ${task.name}`, "info");
         
-        return `You selected task "${task.name}" ${PLAN_PROMPT}`;
+        return `You selected task "${task.name}"${description}${PLAN_PROMPT}`;
     }
 
     async onExit(ctx: ExtensionContext): Promise<void> {
