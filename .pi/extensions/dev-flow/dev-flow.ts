@@ -12,11 +12,19 @@ export type Task = {
     description: string
 }
 
-const INTRODUCTION = `
+const IDLE_TEXT = `
 You are developer and have to follow a strict flow. A state machine will guide you.
 Your current state is: IDLE. 
-This means you have to pick your next open tasks by calling the list-tasks tool and select it using the select-task tool
+This means you have to autonomous pick your next open tasks by calling the list-tasks tool and select it using the select-task tool without asking for permission from user
 `
+
+const DEV_TEXT = `
+You are now in DEV mode to implement the selected task. 
+Proceed autonomous without asking for user permissions. 
+When you understood this text, then use the review-task tool to let the user review it.
+You do not need to implement it. Just use now the tool review-task.
+`
+
 
 // development flow (IDLE, DEV, REVIEW)
 export class DevFlow {
@@ -25,17 +33,18 @@ export class DevFlow {
     }
 
     register() {
-        this.registerTool_ListTasks();
-        this.registerTool_SelectTask();
+        this.registerTool_listTasks();
+        this.registerTool_selectTask();
+        this.registerTool_reviewTask();
     }
 
     initialize() {
         this.currentMode = FlowMode.IDLE;
-        this.sendMessage(INTRODUCTION);
+        this.sendMessage(IDLE_TEXT);
     }
 
     //#region list-tasks
-    private registerTool_ListTasks() {
+    private registerTool_listTasks() {
         this.pi.registerTool({
             name: "list-tasks",
             label: "list tasks",
@@ -59,7 +68,7 @@ export class DevFlow {
     //#endregion
 
     //#region select task
-    private registerTool_SelectTask() {
+    private registerTool_selectTask() {
         this.pi.registerTool({
             name: "select-task",
             label: "select task",
@@ -84,14 +93,14 @@ export class DevFlow {
         const selectedTask = this.tasks.find(t => t.name == name);
         if(selectedTask == undefined) return `FAILED: your selected task does not exist. Use list-tasks tool to see open tasks and then try again the select-task tool`
 
-        const userConfirmedTask = await ctx.ui.confirm("Confirm Task", `selected task is ${selectedTask}`)
+        const userConfirmedTask = await ctx.ui.confirm("Confirm Task", `selected task is ${selectedTask.name}`)
         if(!userConfirmedTask) return `FAILED: user denied selecting this task. Wait for user input before proceeding.`
 
         this.currentTask = selectedTask;
         this.currentMode = FlowMode.DEV;
         this.deleteTask(selectedTask);
 
-        return `SUCCESS: you selected task "${name}". Task description: "${this.currentTask.description}". You are now in DEV mode to implement the selected task.`
+        return `SUCCESS: you selected task "${name}". Task description: "${this.currentTask.description}". ${DEV_TEXT}`
     }
 
     private deleteTask(task: Task) {
@@ -99,6 +108,32 @@ export class DevFlow {
         if (index !== -1) this.tasks.splice(index, 1);
     }
     //#endregion
+
+    private registerTool_reviewTask() {
+        this.pi.registerTool({
+            name: "review-task",
+            label: "review task",
+            description: "review yout task implementation by user to verify that your implementation is correct.",
+            parameters: Type.Object({}),
+
+            execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
+                const result = await this.reviewTask(ctx);
+                return {
+                    content: [{ type: "text", text: result }],
+                    details: {},
+                };
+            },
+        });
+    } 
+
+    private async reviewTask(ctx: ExtensionContext): Promise<string> {
+        const userConfirmed = await ctx.ui.confirm("Review Task", "did agent implement task successfully?");
+
+        if(!userConfirmed) return `FAILED: user reviewed your code implementation and denied it. Wait for input form user before proceeding.`;
+
+        this.currentMode = FlowMode.IDLE;
+        return `SUCCESS: user reviewed your code implementation and approved it. ${IDLE_TEXT}`
+    }
 
     //#region helper
     private sendMessage(msg: string) {
@@ -111,7 +146,8 @@ export class DevFlow {
     private pi: ExtensionAPI
     private currentMode = FlowMode.IDLE;
     private tasks: Task[] = [
-        {name: "add delete method", "description": "implement a delete() method in src/index.ts to delete todo items"}
+        {name: "implement delete method", "description": "implement a delete() method in src/index.ts to delete todo items"},
+        {name: "implement filter method", "description": "implement a filter(search: string) method in src/index.ts to search for specific todo items"}
     ]
     private currentTask: Task | undefined = undefined;
     //#endregion
