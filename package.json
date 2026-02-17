@@ -1,0 +1,7 @@
+{
+  "name": "flow-package",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./extensions"]
+  }
+}
