@@ -185,7 +185,6 @@ export class Flow {
     }
     //#endregion
 
-
     //#region start dev
     private registerTool_startDev() {
         this.pi.registerTool({
@@ -253,7 +252,6 @@ export class Flow {
     //#endregion
 
 
-    
     //#region helper
     private async transition(name: StateName, ctx: ExtensionContext) {
         if(this.currentState) {
