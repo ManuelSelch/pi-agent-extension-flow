@@ -27,7 +27,12 @@ export class Review {
 
         await this.session.updateStatus("reviewing");
 
-        return await this.reviewByHuman(ctx);
+        const human = await this.reviewByHuman(ctx);
+        
+        if(human.success)
+            this.session.completeSession();
+
+        return human;
     }
 
     private async runLinter(ctx: ExtensionContext): Promise<ReviewFeedback> {
