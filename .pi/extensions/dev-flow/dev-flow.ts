@@ -53,8 +53,8 @@ export class DevFlow {
     }
 
     private listTasks(): string {
-        let openTasks = JSON.stringify(this.tasks);
-        return `SUCCESS: your current open tasks are: ${openTasks}`
+        let taskNames = this.tasks.map(t => t.name).join(",");
+        return `SUCCESS: your current open tasks are: ${taskNames}`
     }
     //#endregion
 
