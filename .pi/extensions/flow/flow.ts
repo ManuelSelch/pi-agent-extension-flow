@@ -41,6 +41,8 @@ export class Flow {
 
     register() {
         this.registerCommand_initialize();
+        this.registerCommand_listTasks();
+        this.registerCommand_addTask();
         this.registerTool_listTasks();
         this.registerTool_selectTask();
         this.registerTool_reviewTask();
@@ -68,6 +70,44 @@ export class Flow {
     private initialize(ctx: ExtensionContext) {
         this.switchMode(FlowMode.IDLE, ctx);
         this.sendMessage(IDLE_TEXT);
+    }
+    //#endregion
+
+    //#region command: list-tasks
+    private registerCommand_listTasks() {
+        this.pi.registerCommand("list-tasks", {
+            description: "list all open tasks from tasks.md",
+            handler: async (_, ctx) => {
+                const tasks = await this.taskStorage.getTasks();
+                
+                if (tasks.length === 0) {
+                    ctx.ui.notify("No open tasks found", "info");
+                } else {
+                    const taskList = tasks.map(t => `• ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
+                    ctx.ui.notify(`Open tasks:\n${taskList}`, "info");
+                }
+            }
+        });
+    }
+    //#endregion
+
+    //#region command: add-task
+    private registerCommand_addTask() {
+        this.pi.registerCommand("add-task", {
+            description: "add a new task to tasks.md",
+            handler: async (_, ctx) => {
+                const name = await ctx.ui.input("Task name");
+                if (!name) {
+                    ctx.ui.notify("Task name is required", "error");
+                    return;
+                }
+                
+                const description = await ctx.ui.input("Task description (optional)");
+                
+                await this.taskStorage.addTask(name, description || '');
+                ctx.ui.notify(`Task "${name}" added successfully`, "success");
+            }
+        });
     }
     //#endregion
 

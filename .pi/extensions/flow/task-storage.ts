@@ -84,6 +84,26 @@ export class TaskStorage {
     }
 
     /**
+     * Add a new task to the tasks.md file.
+     * Creates the file if it doesn't exist.
+     */
+    async addTask(name: string, description: string): Promise<void> {
+        const taskLine = `- [ ] ${name} - ${description}`;
+        
+        try {
+            // Check if file exists
+            await access(this.taskFilePath);
+            // Append to existing file
+            const content = await readFile(this.taskFilePath, 'utf-8');
+            const newContent = content.trim() + '\n' + taskLine + '\n';
+            await writeFile(this.taskFilePath, newContent, 'utf-8');
+        } catch {
+            // File doesn't exist - create it
+            await writeFile(this.taskFilePath, taskLine + '\n', 'utf-8');
+        }
+    }
+
+    /**
      * Escape special regex characters in task name
      */
     private escapeRegex(str: string): string {
