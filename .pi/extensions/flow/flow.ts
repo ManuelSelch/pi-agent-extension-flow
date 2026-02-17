@@ -2,7 +2,7 @@ import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { Review } from "./review";
 import { Plan } from "./plan";
-import { TDD } from "./tdd";
+import { Dev } from "./dev";
 import { resolve } from "node:path";
 import { Task, TaskStorage } from "./task-storage";
 import { Session } from "./session";
@@ -27,7 +27,7 @@ export class Flow {
         this.taskStorage = new TaskStorage(resolve(process.cwd(), 'tasks.md'));
         this.session = new Session(resolve(process.cwd(), 'session.json'));
 
-        this.tdd = new TDD(pi);
+        this.dev = new Dev(pi);
         this.review = new Review(pi);
         this.plan = new Plan(pi, this.session);
     }
@@ -42,7 +42,7 @@ export class Flow {
         this.registerTool_startDev();
         this.registerTool_reviewTask();
 
-        this.tdd.register();
+        this.dev.register();
 
         this.pi.on("agent_end", async (event, ctx) => {
             if(this.currentMode == FlowMode.IDLE) return;
@@ -118,7 +118,7 @@ export class Flow {
                         break;
                     case 'developing':
                         this.switchMode(FlowMode.DEV, ctx);
-                        this.tdd.start(ctx);
+                        this.dev.start(ctx);
                         ctx.ui.notify(`Resumed development session for task: ${this.currentTask.name}`, "info");
                         break;
                     case 'reviewing':
@@ -258,7 +258,7 @@ export class Flow {
             return `FAILED: ${result.requirements}. Planning phase was rejected. Continue analyzing the task.`
 
         this.switchMode(FlowMode.DEV, ctx);
-        return this.tdd.start(ctx);
+        return this.dev.start(ctx);
     }
     //#endregion
 
@@ -307,7 +307,7 @@ export class Flow {
     private pi: ExtensionAPI
     private taskStorage: TaskStorage;
     private session: Session; 
-    private tdd: TDD;
+    private dev: Dev;
     private review: Review;
     private plan: Plan;
 

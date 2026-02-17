@@ -22,8 +22,8 @@ When you finished this task, then use the review-task tool to let the user revie
 `
 
 
-// TDD (test-driven-development) flow
-export class TDD {
+// Dev mode using TDD (test-driven-development) style
+export class Dev {
     constructor(pi: ExtensionAPI) {
         this.pi = pi;
     }
