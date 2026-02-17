@@ -4,48 +4,35 @@ import { promisify } from "node:util"
 
 const execAsync = promisify(exec)
 
-const enum Mode {
-  Red,
-  Green,
-  Refactor
+enum Mode {
+  IDLE,
+  DEV,
+  REVIEW
+}
+
+enum TDDMode {
+  RED,
+  GREEN,
+  REFACTOR
 }
 
 let isEnabled = false
-let currentMode = Mode.Red
+let currentMode = Mode.IDLE
+let currentTDDMode = TDDMode.RED
 let waitingForAgentResponse = false // track if waiting for agent to finish
 let didEdit = false
 
 export default function (pi: ExtensionAPI) {
-  pi.registerCommand("tdd", {
-    description: "toggle TDD agent flow",
+  pi.registerCommand("dev-flow", {
+    description: "toggle dev agent flow",
     handler: async (_, ctx) => {
         isEnabled = !isEnabled;
-        
-        ctx.ui.notify(isEnabled ? "TDD enabled": "TDD disabled", "info");
-    }
-  })
+        ctx.ui.notify(isEnabled ? "dev flow enabled": "dev flow disabled", "info");
 
-  pi.registerCommand("tdd-red", {
-    description: "set TDD mode to RED",
-    handler: async (_, ctx) => {
-        currentMode = Mode.Red;
-        ctx.ui.notify("TDD mode is RED", "info");
-    }
-  })
+        if(!isEnabled) return;
 
-  pi.registerCommand("tdd-green", {
-    description: "set TDD mode to GREEN",
-    handler: async (_, ctx) => {
-        currentMode = Mode.Green;
-        ctx.ui.notify("TDD mode is GREEN", "info");
-    }
-  })
-
-  pi.registerCommand("tdd-refactor", {
-    description: "set TDD mode to REFACTOR",
-    handler: async (_, ctx) => {
-        currentMode = Mode.Refactor;
-        ctx.ui.notify("TDD mode is REFACTOR", "info");
+        currentMode = Mode.IDLE;
+        sendMessage("");
     }
   })
 
@@ -66,18 +53,18 @@ export default function (pi: ExtensionAPI) {
     else 
       return;
 
-    switch(currentMode) {
-        case Mode.Red:
+    switch(currentTDDMode) {
+        case TDDMode.RED:
             if(isSrcFolder(path))
                 return { block: true, reason: "in RED TDD mode, you are only allowed to edit test folder and not src folder" }
             break;
         
-        case Mode.Green:
+        case TDDMode.GREEN:
             if(isTestFolder(path))
                 return { block: true, reason: "in GREEN TDD mode, you are only allowed to edit src folder and not test folder" }
             break;
 
-        case Mode.Refactor:
+        case TDDMode.REFACTOR:
             if(isTestFolder(path))
                 return { block: true, reason: "in REFACTOR TDD mode, you are only allowed to edit src folder and not test folder" }
             break;
@@ -116,7 +103,7 @@ export default function (pi: ExtensionAPI) {
       const testOutput = stdout + (stderr ? `\n${stderr}` : '');
       const testPassed = !stderr.includes('FAIL') && !stderr.includes('failed');
 
-      const feedbackMessage = formatTestFeedback(testPassed, testOutput, currentMode);
+      const feedbackMessage = formatTestFeedback(testPassed, testOutput, currentTDDMode);
       
       pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
        
@@ -124,12 +111,16 @@ export default function (pi: ExtensionAPI) {
       let errorMessage = (error as Error).message;
 
       ctx.ui.notify("✗ Tests failed", "error");
-      const feedbackMessage = formatTestFeedback(false, errorMessage, currentMode);
+      const feedbackMessage = formatTestFeedback(false, errorMessage, currentTDDMode);
 
       pi.sendUserMessage(feedbackMessage, {deliverAs: "steer"});
     }
   })
 
+  function sendMessage(msg: string) {
+    // sends user message to agent
+    pi.sendUserMessage(msg, {deliverAs: "steer"});
+  }
 }
 
 function isSrcFolder(path: string) {
@@ -140,7 +131,7 @@ function isTestFolder(path: string) {
     return path.includes("test");
 }
 
-function formatTestFeedback(passed: boolean, output: string, mode: Mode): string {
+function formatTestFeedback(passed: boolean, output: string, mode: TDDMode): string {
   const modeGuidance = getModeGuidance(mode, passed);
   
   return `
@@ -154,26 +145,26 @@ function formatTestFeedback(passed: boolean, output: string, mode: Mode): string
 }
 
 
-function getModeGuidance(mode: Mode, passed: boolean): string {
+function getModeGuidance(mode: TDDMode, passed: boolean): string {
   if (passed) {
     switch(mode) {
-      case Mode.Red:
+      case TDDMode.RED:
         return "Tests should fail in RED mode. If they're not failing for the right reasons, adjust your test.";
-      case Mode.Green:
-        currentMode = Mode.Refactor;
+      case TDDMode.GREEN:
+        currentTDDMode = TDDMode.REFACTOR;
         return "✓ Tests are passing! Mode will advance to REFACTOR - improve code quality without breaking tests.";
-      case Mode.Refactor:
+      case TDDMode.REFACTOR:
         waitingForAgentResponse = true;
         return "✓ Tests still passing after refactor! Ready for the next RED cycle. If you are DONE with refactoring reply with [DONE]";
     }
   } else {
     switch(mode) {
-      case Mode.Red:
-        currentMode = Mode.Green;
+      case TDDMode.RED:
+        currentTDDMode = TDDMode.GREEN;
         return "✓ Tests are now failing as expected. Mode will advance to GREEN - implement the minimum code to make tests pass.";
-      case Mode.Green:
+      case TDDMode.GREEN:
         return "⚠ Tests are failing. Continue implementing until all tests pass.";
-      case Mode.Refactor:
+      case TDDMode.REFACTOR:
         return "⚠ Tests broke during refactor! Fix the code to restore green tests.";
     }
   }
