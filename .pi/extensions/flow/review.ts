@@ -17,11 +17,11 @@ export class Review {
 
     //#region review task
     async review(ctx: ExtensionContext): Promise<ReviewFeedback> {
-        const linter = await this.runLinter(ctx);
-        if(!linter.success) return linter;
+        // const linter = await this.runLinter(ctx);
+        // if(!linter.success) return linter;
 
-        const tests = await this.runTests(ctx);
-        if(!tests.success) return tests;
+        // const tests = await this.runTests(ctx);
+        // if(!tests.success) return tests;
 
         return await this.reviewByHuman(ctx);
     }

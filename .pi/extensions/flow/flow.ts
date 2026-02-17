@@ -23,8 +23,12 @@ This means you have to autonomous pick your next open tasks by calling the list-
 const DEV_TEXT = `
 You are now in DEV mode to implement the selected task. 
 Proceed autonomous without asking for user permissions. 
-When you understood this text, then use the review-task tool to let the user review it.
-You do not need to implement it. Just use now the tool review-task.
+In DEV Mode you have to follow RED, GREEN, REFACTOR. 
+You are now in RED DEV mode. 
+RED DEV mode: write a failing test first. 
+GREEN DEV mode: implement it to pass the test
+REFACTOR: refactor the code while keeping the tests passing
+When you finished this task, then use the review-task tool to let the user review it.
 `
 
 
@@ -44,6 +48,12 @@ export class Flow {
         this.registerTool_reviewTask();
 
         this.tdd.register();
+
+        this.pi.on("agent_end", async (event, ctx) => {
+            if(this.currentMode == FlowMode.IDLE) return;
+
+            this.sendMessage(`You are not done yet. Your current mode is: ${FlowMode[this.currentMode]}. In DEV mode you have to implement your task. When you are done, then call the review-task tool to review your code.`)
+        })
     }
 
     //#region initialize
