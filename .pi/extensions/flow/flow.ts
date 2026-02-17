@@ -1,12 +1,13 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { Review } from "./mode/review";
-import { Plan } from "./mode/plan";
-import { Dev } from "./mode/dev";
+import { IdleState } from "./state/idle-state";
+import { PlanState } from "./state/plan-state";
+import { DevState } from "./state/dev-state";
+import { ReviewState } from "./state/review-state";
 import { resolve } from "node:path";
 import { Task, TaskStorage } from "./util/task-storage";
 import { Session } from "./util/session";
-import { Idle } from "./mode/idle";
+import { State } from "./state/state";
 
 export enum FlowMode {
   IDLE,
@@ -15,6 +16,8 @@ export enum FlowMode {
   REVIEW
 }
 
+export type StateName = 'idle' | 'plan' | 'dev' | 'review';    
+
 // development flow (IDLE, PLAN, DEV, REVIEW)
 export class Flow {
     constructor(pi: ExtensionAPI) {
@@ -22,10 +25,12 @@ export class Flow {
         this.taskStorage = new TaskStorage(resolve(process.cwd(), 'tasks.md'));
         this.session = new Session(resolve(process.cwd(), 'session.json'));
 
-        this.idle = new Idle();
-        this.plan = new Plan(pi, this.session);
-        this.dev = new Dev(pi, this.session);
-        this.review = new Review(pi, this.session);
+        this.states = {
+            'idle': new IdleState(),
+            'plan': new PlanState(this.session),
+            'dev': new DevState(pi, this.session),
+            'review': new ReviewState(this.session)
+        }
     }
 
     register() {
@@ -41,15 +46,13 @@ export class Flow {
         this.registerTool_startDev();
         this.registerTool_reviewTask();
 
-        this.dev.register();
-
         this.pi.on("agent_end", async (event, ctx) => {
             await this.verifyAgentIsDone();
         })
     }
 
     private async verifyAgentIsDone() {
-        if(!this.isEnabled) return;
+        if(this.currentState == undefined) return;
         
         const tasksAreEmpty = (await this.taskStorage.getTasks()).length == 0;
 
@@ -73,10 +76,7 @@ export class Flow {
             description: "start agent flow",
             handler: async (_, ctx) => {
                 ctx.ui.notify("start flow", "info");
-
-                this.isEnabled = true;
-                this.switchMode(FlowMode.IDLE, ctx);
-                this.sendMessage(this.idle.start());
+                this.sendMessage(await this.transition("idle", ctx));
             }
         })
     }
@@ -105,18 +105,15 @@ export class Flow {
                 switch (sessionData.status) {
                     case 'planning':
                         ctx.ui.notify(`Resume planning session for task: ${this.currentTask.name}`, "info");
-                        this.switchMode(FlowMode.PLAN, ctx);
-                        this.sendMessage(await this.plan.start(this.currentTask, ctx));
+                        this.sendMessage(await this.transition("plan", ctx));
                         break;
                     case 'developing':
                         ctx.ui.notify(`Resume development session for task: ${this.currentTask.name}`, "info");
-                        this.switchMode(FlowMode.DEV, ctx);
-                        this.sendMessage(await this.dev.start(this.currentTask, sessionData.requirements, ctx));
+                        this.sendMessage(await this.transition("dev", ctx));
                         break;
                     case 'reviewing':
                         ctx.ui.notify(`Resume review session for task: ${this.currentTask.name}`, "info");
-                        this.switchMode(FlowMode.REVIEW, ctx);
-                        this.sendMessage((await this.review.start(ctx)).feedback);
+                        this.sendMessage(await this.transition("review", ctx));
                         break;
                     default:
                         ctx.ui.notify(`Unknown session status: ${sessionData.status}`, "error");
@@ -133,10 +130,10 @@ export class Flow {
             handler: async (_, ctx) => {
                 ctx.ui.notify("stop flow", "info");
 
-                this.isEnabled = false;
-                this.idle.stop();
-                this.plan.stop();
-                this.dev.stop();
+                if(this.currentState) {
+                    await this.states[this.currentState].onExit(ctx);
+                    this.currentState = undefined;
+                }
             }
         });
     }
@@ -243,7 +240,9 @@ export class Flow {
         this.currentTask = selectedTask;
 
         this.switchMode(FlowMode.PLAN, ctx);
-        return await this.plan.start(selectedTask, ctx);
+        await this.transition("plan", ctx);
+
+        return await this.transition("plan", ctx);
     }
     //#endregion
 
@@ -274,13 +273,13 @@ export class Flow {
 
         if(!this.currentTask) return `FAILED: no task selected. Use select-task tool first.`
 
-        const result = await this.plan.complete(requirements, ctx);
+        const result = await (this.states["plan"] as PlanState).complete(requirements, ctx);
 
         if(!result.success)
             return `FAILED: ${result.requirements}. Planning phase was rejected. Continue analyzing the task.`
 
         this.switchMode(FlowMode.DEV, ctx);
-        return await this.dev.start(this.currentTask, requirements, ctx);
+        return await this.transition("dev", ctx);
     }
     //#endregion
 
@@ -307,20 +306,31 @@ export class Flow {
 
         this.switchMode(FlowMode.REVIEW, ctx);
 
-        const result = await this.review.start(ctx);
+        const feedback = await this.transition("review", ctx);
+        const success = feedback.startsWith("SUCCESS");
 
-        if(!result.success)
-            return `FAILED: ${result.feedback}. Your review got rejected. You are back still in DEV. Fix all review suggestions and then run review-task tool again. Do it autonomously without asking for user permission.`
+        if(!success) return feedback;
 
         this.taskStorage.completeTask(this.currentTask!.name);
-        this.switchMode(FlowMode.IDLE, ctx);
-        return `SUCCESS: ${result.feedback}. You are done with this task. ${this.idle.start()}`
+
+        return await this.transition("idle", ctx);
     }
     //#endregion
 
 
     
     //#region helper
+    private async transition(name: StateName, ctx: ExtensionContext) {
+        if(this.currentState) {
+            await this.states[this.currentState].onExit(ctx)
+        }
+
+        this.currentState = name;
+
+        const promt = await this.states[this.currentState].onEnter(this.currentTask!, ctx); // todo: how to handle task does not exist
+        return promt;
+    }
+
     private sendMessage(msg: string) {
         // sends user message to agent
         this.pi.sendUserMessage(msg, {deliverAs: "steer"});
@@ -336,13 +346,10 @@ export class Flow {
     private pi: ExtensionAPI
     private taskStorage: TaskStorage;
     private session: Session;
-    
-    private idle: Idle;
-    private plan: Plan;
-    private dev: Dev;
-    private review: Review;
 
-    private isEnabled = false;
+    private states: Record<StateName, State>
+    private currentState: StateName | undefined;
+
     private currentMode = FlowMode.IDLE;
     private currentTask: Task | undefined = undefined;
     //#endregion
