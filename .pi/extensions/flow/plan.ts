@@ -6,6 +6,18 @@ export type PlanResult = {
     requirements: string
 }
 
+const PLAN_TEXT = `
+You are now in PLAN mode to analyze the selected task.
+Proceed autonomous without asking for user permissions.
+IMPORTANT: You are NOT allowed to write or edit files in PLAN mode. These tools are blocked.
+Analyze the task requirements thoroughly:
+- Understand what needs to be implemented
+- Identify potential challenges
+- Plan your approach
+- Consider edge cases
+When you have completed the analysis and understand the requirements, use the start-dev tool to proceed to development.
+`
+
 /**
  * Plan phase - analyze task requirements before development.
  * In PLAN mode, the agent analyzes the selected task to understand:
@@ -32,17 +44,12 @@ export class Plan {
      * Start the planning phase for a task.
      * Returns the analyzed requirements.
      */
-    async plan(task: Task, ctx: ExtensionContext): Promise<PlanResult> {
+    start(task: Task, ctx: ExtensionContext): string {
         ctx.ui.notify(`Starting planning phase for: ${task.name}`, "info");
         
         // In PLAN mode, the agent will analyze the task
         // The actual planning logic is driven by the agent through messages
-        // This method sets up the context and returns success
-        
-        return { 
-            success: true, 
-            requirements: `Task "${task.name}" needs to be analyzed. Description: ${task.description}` 
-        };
+        return `SUCCESS: you selected task "${task.name}". Task description: "${task.description}" ${PLAN_TEXT}`;
     }
 
     /**

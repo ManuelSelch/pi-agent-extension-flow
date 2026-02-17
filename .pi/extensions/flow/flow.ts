@@ -19,31 +19,6 @@ Your current state is: IDLE.
 This means you have to autonomous pick your next open tasks by calling the list-tasks tool and select it using the select-task tool without asking for permission from user
 `
 
-
-const PLAN_TEXT = `
-You are now in PLAN mode to analyze the selected task.
-Proceed autonomous without asking for user permissions.
-IMPORTANT: You are NOT allowed to write or edit files in PLAN mode. These tools are blocked.
-Analyze the task requirements thoroughly:
-- Understand what needs to be implemented
-- Identify potential challenges
-- Plan your approach
-- Consider edge cases
-When you have completed the analysis and understand the requirements, use the start-dev tool to proceed to development.
-`
-
-const DEV_TEXT = `
-You are now in DEV mode to implement the selected task. 
-Proceed autonomous without asking for user permissions. 
-In DEV Mode you have to follow RED, GREEN, REFACTOR. 
-You are now in RED DEV mode. 
-RED DEV mode: write a failing test first. 
-GREEN DEV mode: implement it to pass the test
-REFACTOR: refactor the code while keeping the tests passing
-When you finished this task, then use the review-task tool to let the user review it.
-`
-
-
 // development flow (IDLE, DEV, REVIEW)
 export class Flow {
     constructor(pi: ExtensionAPI) {
@@ -195,10 +170,10 @@ export class Flow {
         if(!userConfirmedTask) return `FAILED: user denied selecting this task. Wait for user input before proceeding.`
 
         this.currentTask = selectedTask;
-        this.switchMode(FlowMode.PLAN, ctx);
         await this.deleteTask(selectedTask);
 
-        return `SUCCESS: you selected task "${name}". Task description: "${this.currentTask.description}". ${PLAN_TEXT}`
+        this.switchMode(FlowMode.PLAN, ctx);
+        return this.plan.start(selectedTask, ctx);
     }
 
     private async deleteTask(task: Task): Promise<void> {
@@ -236,7 +211,7 @@ export class Flow {
             return `FAILED: ${result.requirements}. Planning phase was rejected. Continue analyzing the task.`
 
         this.switchMode(FlowMode.DEV, ctx);
-        return `SUCCESS: ${result.requirements} ${DEV_TEXT}`
+        return this.tdd.start(ctx);
     }
     //#endregion
 
@@ -277,12 +252,6 @@ export class Flow {
 
     private switchMode(mode: FlowMode, ctx: ExtensionContext) {
         this.currentMode = mode;
-
-        if(mode == FlowMode.DEV)
-            this.tdd.start(ctx);
-        else
-            this.tdd.stop(ctx);
-
         ctx.ui.notify(`mode switched to ${FlowMode[mode]}`)
     }
     //#endregion

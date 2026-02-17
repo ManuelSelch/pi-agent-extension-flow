@@ -10,6 +10,18 @@ enum Mode {
   REFACTOR
 }
 
+const DEV_TEXT = `
+You are now in DEV mode to implement the selected task. 
+Proceed autonomous without asking for user permissions. 
+In DEV Mode you have to follow RED, GREEN, REFACTOR. 
+You are now in RED DEV mode. 
+RED DEV mode: write a failing test first. 
+GREEN DEV mode: implement it to pass the test
+REFACTOR: refactor the code while keeping the tests passing
+When you finished this task, then use the review-task tool to let the user review it.
+`
+
+
 // TDD (test-driven-development) flow
 export class TDD {
     constructor(pi: ExtensionAPI) {
@@ -88,11 +100,13 @@ export class TDD {
         }
     }
 
-    start(ctx: ExtensionContext) {
+    start(ctx: ExtensionContext): string {
         this.isEnabled = true;
         this.currentMode = Mode.RED;
 
         ctx.ui.notify("TDD mode is now: RED");
+
+        return DEV_TEXT;
     }
 
     stop(ctx: ExtensionContext) {
