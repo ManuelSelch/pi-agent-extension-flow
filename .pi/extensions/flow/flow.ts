@@ -1,6 +1,7 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { Review } from "./review";
+import { TDD } from "./tdd-v2";
 
 export enum FlowMode {
   IDLE,
@@ -32,6 +33,7 @@ export class Flow {
     constructor(pi: ExtensionAPI) {
         this.pi = pi;
 
+        this.tdd = new TDD(pi);
         this.review = new Review(pi);
     }
 
@@ -40,6 +42,8 @@ export class Flow {
         this.registerTool_listTasks();
         this.registerTool_selectTask();
         this.registerTool_reviewTask();
+
+        this.tdd.register();
     }
 
     //#region initialize
@@ -48,13 +52,13 @@ export class Flow {
             description: "initialize agent flow",
             handler: async (_, ctx) => {
                 ctx.ui.notify("dev flow enabled", "info");
-                this.initialize();
+                this.initialize(ctx);
             }
         })
     }
 
-    private initialize() {
-        this.currentMode = FlowMode.IDLE;
+    private initialize(ctx: ExtensionContext) {
+        this.switchMode(FlowMode.IDLE, ctx);
         this.sendMessage(IDLE_TEXT);
     }
     //#endregion
@@ -113,7 +117,7 @@ export class Flow {
         if(!userConfirmedTask) return `FAILED: user denied selecting this task. Wait for user input before proceeding.`
 
         this.currentTask = selectedTask;
-        this.currentMode = FlowMode.DEV;
+        this.switchMode(FlowMode.DEV, ctx);
         this.deleteTask(selectedTask);
 
         return `SUCCESS: you selected task "${name}". Task description: "${this.currentTask.description}". ${DEV_TEXT}`
@@ -149,7 +153,7 @@ export class Flow {
         if(!result.success)
             return `FAILED: ${result.feedback}. Your review got rejected. You are back still in DEV. Fix all review suggestions and then run review-task tool again. Do it autonomously without asking for user permission.`
 
-        this.currentMode = FlowMode.IDLE;
+        this.switchMode(FlowMode.IDLE, ctx);
         return `SUCCESS: ${result.feedback}. You are done with this task.  ${IDLE_TEXT}`
     }
     //#endregion
@@ -159,11 +163,23 @@ export class Flow {
         // sends user message to agent
         this.pi.sendUserMessage(msg, {deliverAs: "steer"});
     }
+
+    private switchMode(mode: FlowMode, ctx: ExtensionContext) {
+        this.currentMode = mode;
+
+        if(mode == FlowMode.DEV)
+            this.tdd.start(ctx);
+        else
+            this.tdd.stop(ctx);
+
+        ctx.ui.notify(`mode switched to ${FlowMode[mode]}`)
+    }
     //#endregion
 
     //#region properties
     private pi: ExtensionAPI
 
+    private tdd: TDD;
     private review: Review;
 
     private currentMode = FlowMode.IDLE;
