@@ -1,4 +1,5 @@
 import { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { Session } from "./session";
 
 export type ReviewFeedback = {
     success: boolean,
@@ -11,8 +12,9 @@ export type ReviewFeedback = {
 // - running review agent
 // - aproving my human
 export class Review {
-    constructor(pi: ExtensionAPI) {
+    constructor(pi: ExtensionAPI, session: Session) {
         this.pi = pi;
+        this.session = session;
     }
 
     //#region review task
@@ -22,6 +24,8 @@ export class Review {
 
         // const tests = await this.runTests(ctx);
         // if(!tests.success) return tests;
+
+        await this.session.updateStatus("reviewing");
 
         return await this.reviewByHuman(ctx);
     }
@@ -48,4 +52,5 @@ export class Review {
     //#endregion
 
     private pi: ExtensionAPI;
+    private session: Session;
 }

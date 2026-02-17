@@ -2,6 +2,7 @@ import { ExtensionAPI, ExtensionContext, isToolCallEventType } from "@mariozechn
 import { exec } from "node:child_process"
 import { promisify } from "node:util"
 import { Session } from "./session";
+import { Task } from "./task-storage";
 
 const execAsync = promisify(exec)
 
@@ -102,7 +103,7 @@ export class Dev {
         }
     }
 
-    async start(ctx: ExtensionContext): Promise<string> {
+    async start(task: Task, requirements: string, ctx: ExtensionContext): Promise<string> {
         this.isEnabled = true;
         this.currentMode = Mode.RED;
 
@@ -110,7 +111,7 @@ export class Dev {
 
         ctx.ui.notify("TDD mode is now: RED");
 
-        return DEV_TEXT;
+        return `task name: ${task.name}\ntask description: ${task.description}\nrequirements:\n${requirements}\n${DEV_TEXT}`;
     }
 
     stop(ctx: ExtensionContext) {

@@ -29,7 +29,7 @@ export class Flow {
 
         this.plan = new Plan(pi, this.session);
         this.dev = new Dev(pi, this.session);
-        this.review = new Review(pi);
+        this.review = new Review(pi, this.session);
     }
 
     register() {
@@ -112,19 +112,19 @@ export class Flow {
                 // Resume based on status
                 switch (sessionData.status) {
                     case 'planning':
+                        ctx.ui.notify(`Resume planning session for task: ${this.currentTask.name}`, "info");
                         this.switchMode(FlowMode.PLAN, ctx);
-                        await this.plan.start(this.currentTask, ctx);
-                        ctx.ui.notify(`Resumed planning session for task: ${this.currentTask.name}`, "info");
+                        this.sendMessage(await this.plan.start(this.currentTask, ctx));
                         break;
                     case 'developing':
+                        ctx.ui.notify(`Resume development session for task: ${this.currentTask.name}`, "info");
                         this.switchMode(FlowMode.DEV, ctx);
-                        this.dev.start(ctx);
-                        ctx.ui.notify(`Resumed development session for task: ${this.currentTask.name}`, "info");
+                        this.sendMessage(await this.dev.start(this.currentTask, sessionData.requirements, ctx));
                         break;
                     case 'reviewing':
+                        ctx.ui.notify(`Resume review session for task: ${this.currentTask.name}`, "info");
                         this.switchMode(FlowMode.REVIEW, ctx);
-                        await this.review.start(ctx);
-                        ctx.ui.notify(`Resumed review session for task: ${this.currentTask.name}`, "info");
+                        this.sendMessage((await this.review.start(ctx)).feedback);
                         break;
                     default:
                         ctx.ui.notify(`Unknown session status: ${sessionData.status}`, "error");
@@ -258,7 +258,7 @@ export class Flow {
             return `FAILED: ${result.requirements}. Planning phase was rejected. Continue analyzing the task.`
 
         this.switchMode(FlowMode.DEV, ctx);
-        return this.dev.start(ctx);
+        return await this.dev.start(this.currentTask, requirements, ctx);
     }
     //#endregion
 
