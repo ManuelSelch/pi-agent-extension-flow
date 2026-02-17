@@ -27,7 +27,7 @@ You do not need to implement it. Just use now the tool review-task.
 
 
 // development flow (IDLE, DEV, REVIEW)
-export class DevFlow {
+export class Flow {
     constructor(pi: ExtensionAPI) {
         this.pi = pi;
     }

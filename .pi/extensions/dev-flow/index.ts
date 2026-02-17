@@ -1,8 +1,8 @@
 import { ExtensionAPI } from "@mariozechner/pi-coding-agent"
-import { DevFlow } from "./dev-flow"
+import { Flow } from "./flow"
 
 export default function (pi: ExtensionAPI) {
-    let flow = new DevFlow(pi);
+    let flow = new Flow(pi);
 
     flow.register();
 }
