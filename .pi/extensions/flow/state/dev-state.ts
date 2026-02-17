@@ -97,19 +97,31 @@ export class DevState implements State {
     private async runTests(ctx: ExtensionContext): Promise<string> {
         ctx.ui.notify("Running tests...", "info");
 
+        let stdout: string;
+        let stderr: string;
+        let testPassed: boolean;
+
         try {
-            const { stdout, stderr } = await execAsync("npm test", {
+            const res = await execAsync("npm test", {
                 cwd: process.cwd(),
                 timeout: 5000
             });
+
+            stdout = res.stdout;
+            stderr = res.stderr;
 
             const testOutput = stdout + (stderr ? `\n${stderr}` : '');
             const testPassed = !stderr.includes('FAIL') && !stderr.includes('failed');
 
             return this.formatTestFeedback(testPassed, testOutput);
         } catch (error: any) {
-            return this.formatTestFeedback(false, JSON.stringify(error));
+            stdout = error.stdout ?? '';
+            stderr = error.stderr ?? '';
+            testPassed = false;
         }
+
+        const testOutput = stdout + (stderr ? `\n${stderr}` : '');
+        return this.formatTestFeedback(testPassed, testOutput);
     }
 
     private formatTestFeedback(passed: boolean, output: string): string {
