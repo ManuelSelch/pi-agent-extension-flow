@@ -64,9 +64,19 @@ export class PlanState implements State {
         );
 
         if (!userConfirmed) {
+            // Collect feedback from user on why the plan was rejected
+            const feedback = await ctx.ui.input(
+                "Planning Feedback",
+                "Please provide feedback on what needs to be improved or what's missing:"
+            );
+
+            const feedbackMessage = feedback?.trim() 
+                ? `User rejected the planning. Feedback: ${feedback}`
+                : "User rejected the planning. Continue analyzing the task requirements.";
+
             return {
                 success: false,
-                requirements: "User rejected the planning. Continue analyzing the task requirements."
+                requirements: feedbackMessage
             };
         }
 
